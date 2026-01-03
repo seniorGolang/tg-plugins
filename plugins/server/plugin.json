@@ -1,0 +1,8 @@
+{
+  "name": "server",
+  "version": "2.4.0",
+  "description": "Генератор серверного кода для HTTP/JSON-RPC серверов на основе Fiber",
+  "author": "seniorGolang",
+  "license": "MIT"
+}
+

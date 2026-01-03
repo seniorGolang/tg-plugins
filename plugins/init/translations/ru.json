@@ -1,0 +1,7 @@
+{
+  "Initialize new project with basic structure": "Инициализация нового проекта с базовой структурой",
+  "Go module name": "Имя Go модуля",
+  "Project name": "Имя проекта",
+  "Service name": "Имя сервиса",
+  "Directory for project creation (default: ./<project>)": "Директория для создания проекта (по умолчанию: ./<project>)"
+}

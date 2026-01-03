@@ -1,0 +1,68 @@
+package main
+
+import (
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
+
+	_ "github.com/KimMachineGun/automemlimit"
+	"github.com/rs/zerolog/log"
+	_ "go.uber.org/automaxprocs"
+
+	"{{.moduleName}}/internal/services/{{.serviceName}}"
+	"{{.moduleName}}/internal/transport"
+	"{{.moduleName}}/internal/transport/logger"
+	"{{.moduleName}}/internal/utils/header"
+
+	"{{.moduleName}}/internal/config"
+)
+
+const (
+	serviceName = "{{.serviceName}}"
+)
+
+func main() {
+
+	log.Logger = config.Service().Logger()
+
+	serverLogger := logger.NewZerolog(log.Logger)
+
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+
+	slog.Info("start service", slog.String("service", serviceName))
+	defer slog.Info("shutdown server", slog.String("service", serviceName))
+
+	livenessSrv := transport.ServeHealth(serverLogger, "/liveness", config.Service().LivenessBind, "ok")
+	defer livenessSrv.Stop()
+
+	svc{{.serviceNameCamel}} := {{.serviceName}}.New()
+
+	services := []transport.Option{
+		transport.WithRequestID(header.XRequestID.String()),
+		transport.{{.serviceNameCamel}}(svc{{.serviceNameCamel}}),
+	}
+
+	srv := transport.New(serverLogger, services...).WithMetrics().WithLog()
+
+	srv.ServeMetrics(serverLogger, "/", config.Service().MetricsBind)
+
+	readinessSrv := transport.ServeHealth(serverLogger, "/readiness", config.Service().ReadinessBind, "ok")
+	defer readinessSrv.Stop()
+
+	go func() {
+		slog.Info("listen on", slog.String("bind", config.Service().Bind))
+		if err := srv.Fiber().Listen(config.Service().Bind); err != nil {
+			slog.Error("server error", slog.Any("error", err))
+			shutdown <- syscall.SIGTERM
+		}
+	}()
+
+	<-shutdown
+	slog.Info("shutting down gracefully...")
+
+	if err := srv.Shutdown(); err != nil {
+		slog.Error("server shutdown error", slog.Any("error", err))
+	}
+}

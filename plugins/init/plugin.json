@@ -1,0 +1,8 @@
+{
+  "name": "init",
+  "version": "2.4.0",
+  "description": "Инициализация нового проекта с базовой структурой",
+  "author": "seniorGolang",
+  "license": "MIT"
+}
+
