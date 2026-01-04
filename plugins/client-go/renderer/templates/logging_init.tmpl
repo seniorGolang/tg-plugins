@@ -1,0 +1,29 @@
+package main
+
+import (
+    "context"
+    "log/slog"
+    "os"
+    "{{.PkgPath}}"
+)
+
+func main() {
+    // Настраиваем slog handler для структурированного логирования
+    // JSON handler для production
+    handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+        Level: slog.LevelDebug,
+    })
+    logger := slog.New(handler)
+    slog.SetDefault(logger)
+    
+    // Инициализируем клиент с логированием
+    client := {{.PkgName}}.New("http://localhost:9000",
+        {{.PkgName}}.LogRequest(),
+    )
+    
+    // Использование клиента
+    ctx := context.Background()
+    // service := client.ServiceName()
+    // result, err := service.MethodName(ctx, params...)
+}
+

@@ -1,0 +1,48 @@
+package main
+
+import (
+    "context"
+    "log/slog"
+
+    "{{.PkgPath}}"
+)
+
+func main() {
+    // Клиент с кастомными заголовками
+    // Определяем типизированные ключи для контекста
+    type contextKey string
+    const (
+        authorizationKey contextKey = "Authorization"
+        apiKeyKey        contextKey = "X-Api-Key"
+        requestSignKey   contextKey = "X-Request-Sign"
+    )
+    
+    client := {{.PkgName}}.New("http://localhost:9000",
+        {{.PkgName}}.Headers(
+            authorizationKey,
+            apiKeyKey,
+            requestSignKey,
+        ),
+    )
+    
+    // Значения, установленные в контексте, автоматически передаются в HTTP заголовки
+    // при вызове методов клиента, используя ключи, указанные в опции Headers
+    ctx := context.WithValue(context.Background(), authorizationKey, "Bearer token123")
+    ctx = context.WithValue(ctx, apiKeyKey, "api-key-value")
+    ctx = context.WithValue(ctx, requestSignKey, "abc123def456")
+    
+    // Заголовки будут автоматически добавляться ко всем запросам
+    {{.ServiceVar}} := client.{{.ContractName}}()
+    err := {{.MethodCall}}
+    if err != nil {
+        slog.Error("Request failed",
+            slog.String("error", err.Error()),
+        )
+        return
+    }
+    slog.Info("Request completed successfully",
+        slog.String("service", "{{.ContractName}}"),
+        slog.String("method", "{{.MethodName}}"),
+    )
+}
+

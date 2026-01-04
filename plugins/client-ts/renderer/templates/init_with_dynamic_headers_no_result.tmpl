@@ -1,0 +1,25 @@
+import { Client } from './client';
+
+// Инициализация клиента с функциональными заголовками (для динамических токенов)
+const client = new Client('http://localhost:9000', {
+  headers: async () => {
+    // Заголовки вычисляются при каждом запросе
+    // Например, можно получить свежий токен из хранилища
+    const token = await getAuthToken(); // ваша функция получения токена
+    return {
+      'Authorization': `Bearer ${token}`,
+      'X-API-Key': 'api-key-value',
+      'X-Request-Sign': generateRequestSign() // функция генерации подписи
+    };
+  }
+});
+
+const {{.ServiceVar}} = client.{{.ClientMethodName}}();
+
+try {
+  await {{.MethodCall}};
+  console.log('Request completed successfully');
+} catch (error) {
+  console.error('Error:', error);
+}
+

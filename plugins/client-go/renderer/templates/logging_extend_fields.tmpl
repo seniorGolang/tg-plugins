@@ -1,0 +1,55 @@
+package main
+
+import (
+    "context"
+    "log/slog"
+    "os"
+    "{{.PkgPath}}"
+)
+
+func main() {
+    // Настраиваем slog handler
+    handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+        Level: slog.LevelDebug,
+    })
+    logger := slog.New(handler)
+    slog.SetDefault(logger)
+    
+    // Инициализируем клиент с логированием
+    client := {{.PkgName}}.New("http://localhost:9000",
+        {{.PkgName}}.LogRequest(),
+    )
+    
+    // Создаем контекст с дополнительными полями для конкретного запроса
+    // Эти поля будут добавлены к полям, которые логирует клиент
+    ctx := context.Background()
+    ctx = slog.With(
+        slog.String("request_id", "req-12345"),
+        slog.String("user_id", "user-67890"),
+        slog.String("operation", "{{.MethodName}}"),
+    ).WithContext(ctx)
+    
+    // Использование клиента
+    // Логи клиента будут содержать:
+    // - поля клиента: method, curl
+    // - ваши дополнительные поля: request_id, user_id, operation
+    {{.ServiceVar}} := client.{{.ContractName}}()
+    {{.ResultVar}}, err := {{.MethodCall}}
+    if err != nil {
+        // Можно добавить еще больше полей при логировании ошибки
+        slog.ErrorContext(ctx, "Request failed",
+            slog.String("service", "{{.ContractName}}"),
+            slog.String("method", "{{.MethodName}}"),
+            slog.Any("error", err),
+            slog.Bool("retry", false),
+        )
+        return
+    }
+    slog.InfoContext(ctx, "Request completed successfully",
+        slog.String("service", "{{.ContractName}}"),
+        slog.Group("response",
+            slog.Any("result", {{.ResultVar}}),
+        ),
+    )
+}
+

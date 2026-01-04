@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"tgp/internal/cleanup"
 	"tgp/plugins/init/generator"
 	"tgp/shared"
 )
@@ -37,7 +38,7 @@ func (p *InitPlugin) Info() shared.PluginInfo {
 						Type:        "string",
 						Description: translate("Go module name"),
 						Required:    false,
-					},
+		},
 					{
 						Name:        "project",
 						Short:       "p",
@@ -73,7 +74,7 @@ func (p *InitPlugin) Execute(project shared.Project, rootDir string, options map
 
 	logger := shared.GetLogger()
 
-	logger.Info("init плагин запущен")
+	logger.Info(translate("init plugin started"))
 
 	// Получаем параметры
 	projectName, ok := options["project"].(string)
@@ -110,6 +111,12 @@ func (p *InitPlugin) Execute(project shared.Project, rootDir string, options map
 
 	// Логирование
 	logger.Info(fmt.Sprintf("initializing project: module=%s, project=%s, service=%s, baseDir=%s", moduleName, projectName, serviceName, baseDir))
+
+	// Очищаем старые сгенерированные файлы перед новой генерацией (если директория существует)
+	if err := cleanup.CleanupGeneratedFiles(baseDir); err != nil {
+		logger.Warn(fmt.Sprintf("failed to cleanup generated files: error=%v", err))
+		// Не возвращаем ошибку, так как очистка не критична
+	}
 
 	// Инициализируем проект
 	if err = generator.GenerateSkeleton(moduleName, projectName, serviceName, baseDir); err != nil {

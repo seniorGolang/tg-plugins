@@ -1,0 +1,19 @@
+import { Client } from './client';
+
+// Инициализация клиента с опциями
+const client = new Client('http://localhost:9000', {
+  headers: {
+    'Authorization': 'Bearer token123',
+    'X-API-Key': 'api-key-value'
+  }
+});
+
+const {{.ServiceVar}} = client.{{.ClientMethodName}}();
+
+try {
+  await {{.MethodCall}};
+  console.log('Request completed successfully');
+} catch (error) {
+  console.error('Error:', error);
+}
+

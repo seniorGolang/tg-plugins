@@ -1,0 +1,36 @@
+package main
+
+import (
+    "context"
+    "log/slog"
+    "os"
+    "{{.PkgPath}}"
+)
+
+func main() {
+    // Создаем кастомный handler с дополнительными полями по умолчанию
+    // Эти поля будут включены во все логи
+    baseLogger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+        Level: slog.LevelDebug,
+    }))
+    
+    // Добавляем глобальные поля через With()
+    logger := baseLogger.With(
+        slog.String("service", "my-service"),
+        slog.String("version", "1.0.0"),
+        slog.String("environment", "production"),
+    )
+    slog.SetDefault(logger)
+    
+    // Инициализируем клиент с логированием
+    client := {{.PkgName}}.New("http://localhost:9000",
+        {{.PkgName}}.LogRequest(),
+    )
+    
+    // Использование клиента
+    // Логи клиента будут автоматически содержать поля service, version, environment
+    ctx := context.Background()
+    // service := client.ServiceName()
+    // result, err := service.MethodName(ctx, params...)
+}
+

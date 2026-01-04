@@ -5,31 +5,27 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
+
+	translatePkg "tgp/internal/translate"
 )
 
 //go:embed translations/ru.json
 var ruTranslationsJSON string
 
 var (
-	ruTranslations map[string]string
+	translator *translatePkg.Translator
 )
 
 func init() {
 	// Load Russian translations
+	ruTranslations := make(map[string]string)
 	if err := json.Unmarshal([]byte(ruTranslationsJSON), &ruTranslations); err != nil {
 		ruTranslations = make(map[string]string)
 	}
+	translator = translatePkg.NewTranslator(ruTranslations)
 }
 
-// translate translates English text to the detected language.
-// If language is Russian and translation exists, returns Russian translation.
-// Otherwise, returns the original English text (key).
+// translate переводит текст на обнаруженный язык консоли
 func translate(text string) string {
-	// TODO: Добавить определение языка через хост, если нужно
-	// Пока возвращаем русский перевод, если он есть
-	if translation, ok := ruTranslations[text]; ok {
-		return translation
-	}
-	// Return original text (English) as default
-	return text
+	return translator.Translate(text)
 }

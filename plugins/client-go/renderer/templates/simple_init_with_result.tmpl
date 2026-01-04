@@ -1,0 +1,30 @@
+package main
+
+import (
+    "context"
+    "log/slog"
+
+    "{{.PkgPath}}"
+)
+
+func main() {
+    // Простая инициализация
+    client := {{.PkgName}}.New("http://localhost:9000")
+    
+    // Использование клиента
+    ctx := context.Background()
+    {{.ServiceVar}} := client.{{.ContractName}}()
+    {{.ResultVar}}, err := {{.MethodCall}}
+    if err != nil {
+        slog.Error("Request failed",
+            slog.String("error", err.Error()),
+        )
+        return
+    }
+    slog.Info("Request completed successfully", 
+        slog.Group("response",
+            slog.Any("result", {{.ResultVar}}),
+        ),
+    )
+}
+

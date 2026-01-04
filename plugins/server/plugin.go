@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tgp/internal/cleanup"
 	"tgp/plugins/server/generator"
 	"tgp/shared"
 )
@@ -22,20 +23,20 @@ func (p *ServerPlugin) Info() shared.PluginInfo {
 		Name:        "server",
 		Version:     "2.4.0",
 		Doc:         pluginDoc,
-		Description: "Генератор серверного кода для HTTP/JSON-RPC серверов на основе Fiber",
+		Description: translate("Server code generator for HTTP/JSON-RPC servers based on Fiber"),
 		Author:      "AlexK (seniorGolang@gmail.com)",
 		License:     "MIT",
 		Category:    "server",
 		Commands: []shared.Command{
 			{
 				Path:        []string{"server"},
-				Description: "Генерация серверного кода",
+				Description: translate("Generate server code"),
 				Options: []shared.Option{
 					{
 						Name:        "contracts",
 						Short:       "c",
 						Type:        "string",
-						Description: "Путь к папке с контрактами (относительно rootDir)",
+						Description: translate("Path to contracts folder (relative to rootDir)"),
 						Required:    false,
 						Default:     "contracts",
 					},
@@ -43,20 +44,20 @@ func (p *ServerPlugin) Info() shared.PluginInfo {
 						Name:        "out",
 						Short:       "o",
 						Type:        "string",
-						Description: "Путь к выходной директории",
+						Description: translate("Path to output directory"),
 						Required:    true,
 					},
 					{
 						Name:        "ifaces",
 						Type:        "string",
-						Description: "Список интерфейсов через запятую для фильтрации (например: \"Contract1,Contract2\")",
+						Description: translate("Comma-separated list of interfaces for filtering (e.g., \"Contract1,Contract2\")"),
 						Required:    false,
 					},
 					{
 						Name:        "verbose",
 						Short:       "v",
 						Type:        "bool",
-						Description: "Подробный вывод",
+						Description: translate("Verbose output"),
 						Required:    false,
 						Default:     false,
 					},
@@ -71,7 +72,7 @@ func (p *ServerPlugin) Execute(project shared.Project, rootDir string, options m
 
 	logger := shared.GetLogger()
 
-	logger.Info("server плагин запущен")
+	logger.Info(translate("server plugin started"))
 
 	// shared.Project это map[string]any, который содержит сериализованный core.Project
 	// Преобразуем его напрямую в core.Project
@@ -122,6 +123,12 @@ func (p *ServerPlugin) Execute(project shared.Project, rootDir string, options m
 		generator.SetVerbose(true)
 	}
 
+	// Очищаем старые сгенерированные файлы перед новой генерацией
+	if err := cleanup.CleanupGeneratedFiles(outDir); err != nil {
+		logger.Warn(fmt.Sprintf("failed to cleanup generated files: error=%v", err))
+		// Не возвращаем ошибку, так как очистка не критична
+	}
+
 	// Генерируем транспортные файлы
 	logger.Info(fmt.Sprintf("generating transport files: outDir=%s ifaces=%v", outDir, ifaces))
 	if err = generator.GenerateTransportFiles(coreProject, outDir, projectRoot, ifaces...); err != nil {
@@ -153,7 +160,7 @@ func (p *ServerPlugin) Execute(project shared.Project, rootDir string, options m
 		logger.Info(fmt.Sprintf("server generated successfully: contract=%s", contract.ID))
 	}
 
-	logger.Info("server плагин завершён")
+	logger.Info(translate("server plugin completed"))
 	return
 }
 

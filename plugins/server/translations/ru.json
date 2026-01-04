@@ -1,0 +1,11 @@
+{
+	"Server code generator for HTTP/JSON-RPC servers based on Fiber": "Генератор серверного кода для HTTP/JSON-RPC серверов на основе Fiber",
+	"Path to contracts folder (relative to rootDir)": "Путь к папке с контрактами (относительно rootDir)",
+	"Path to output directory": "Путь к выходной директории",
+	"Comma-separated list of interfaces for filtering (e.g., \"Contract1,Contract2\")": "Список интерфейсов через запятую для фильтрации (например: \"Contract1,Contract2\")",
+	"Verbose output": "Подробный вывод",
+	"Generate server code": "Генерация серверного кода",
+	"server plugin started": "server плагин запущен",
+	"server plugin completed": "server плагин завершён"
+}
+

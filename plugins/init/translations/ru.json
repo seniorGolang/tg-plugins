@@ -3,5 +3,6 @@
   "Go module name": "Имя Go модуля",
   "Project name": "Имя проекта",
   "Service name": "Имя сервиса",
-  "Directory for project creation (default: ./<project>)": "Директория для создания проекта (по умолчанию: ./<project>)"
+  "Directory for project creation (default: ./<project>)": "Директория для создания проекта (по умолчанию: ./<project>)",
+  "init plugin started": "init плагин запущен"
 }

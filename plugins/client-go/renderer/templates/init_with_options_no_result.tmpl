@@ -1,0 +1,57 @@
+package main
+
+import (
+    "context"
+    "crypto/tls"
+    "crypto/x509"
+    "log/slog"
+    "os"
+
+    "{{.PkgPath}}"
+)
+
+func main() {
+    // Загружаем клиентский сертификат и ключ
+    cert, err := tls.LoadX509KeyPair("client.crt", "client.key")
+    if err != nil {
+        slog.Error("Failed to load client certificate", "error", err)
+        return
+    }
+    
+    // Загружаем CA сертификат для проверки сервера (опционально)
+    caCert, err := os.ReadFile("ca.crt")
+    if err != nil {
+        slog.Error("Failed to load CA certificate", "error", err)
+        return
+    }
+    caCertPool := x509.NewCertPool()
+    if !caCertPool.AppendCertsFromPEM(caCert) {
+        slog.Error("Failed to parse CA certificate")
+        return
+    }
+    
+    // Настраиваем TLS конфигурацию
+    tlsConfig := &tls.Config{
+        Certificates: []tls.Certificate{cert},
+        RootCAs:      caCertPool,
+    }
+    
+    // Инициализация клиента с опциями
+    client := {{.PkgName}}.New("https://localhost:9000",
+        {{.PkgName}}.ConfigTLS(tlsConfig),
+        {{.PkgName}}.LogRequest(),
+        {{.PkgName}}.LogOnError(),
+    )
+    
+    // Использование клиента
+    {{.ServiceVar}} := client.{{.ContractName}}()
+    err := {{.MethodCall}}
+    if err != nil {
+        slog.Error("Request failed",
+            slog.String("error", err.Error()),
+        )
+        return
+    }
+    slog.Info("Request completed successfully")
+}
+

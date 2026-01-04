@@ -1,0 +1,11 @@
+{
+	"Go client generator for HTTP/JSON-RPC servers": "Генератор Go клиента для HTTP/JSON-RPC серверов",
+	"Path to output directory": "Путь к выходной директории",
+	"Comma-separated list of contracts for filtering (e.g., \"Contract1,Contract2\")": "Список контрактов через запятую для фильтрации (например: \"Contract1,Contract2\")",
+	"Path to documentation file (default: <out>/README.md)": "Путь к файлу документации (по умолчанию: <out>/README.md)",
+	"Disable documentation generation": "Отключить генерацию документации",
+	"Verbose output": "Подробный вывод",
+	"Generate Go client": "Генерация Go клиента",
+	"client-go plugin started": "client-go плагин запущен",
+	"client-go plugin completed": "client-go плагин завершён"
+}

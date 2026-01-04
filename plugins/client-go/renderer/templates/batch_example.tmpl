@@ -1,0 +1,52 @@
+package main
+
+import (
+    "context"
+    "fmt"
+    "log/slog"
+
+    "{{.PkgPath}}"{{if .NeedsDto}}
+    "{{.PkgPath}}/dto"{{end}}
+)
+
+func main() {
+
+    client := {{.PkgName}}.New("http://localhost:9000")
+
+{{range .Services}}
+    {{.Var}} := client.{{.Name}}()
+
+{{end}}    // Создаем batch запрос с несколькими методами
+    var requests = []{{.PkgName}}.RequestRPC{
+{{range $index, $request := .Requests}}        {{$request.ServiceVar}}.Req{{$request.MethodName}}({{$request.CallbackName}}{{if $request.HasParams}}, {{$request.Params}}{{end}}),
+{{end}}    }
+
+    // Выполняем batch запрос
+    client.Batch(context.Background(), requests...)
+
+    // Callback функции будут вызваны автоматически при получении ответов
+    // Результаты доступны в переменных result1, result2, ...
+}
+
+{{range $index, $callback := .Callbacks}}{{if gt $index 0}}
+
+{{end}}func {{$callback.Name}}({{range $i, $result := $callback.Results}}{{if $i}}, {{end}}{{$result.Name}} {{$result.Type}}{{end}}) {
+
+    {{- if $callback.HasError}}
+    if err != nil {
+        fmt.Printf("Error in {{$callback.ContractName}}.{{$callback.MethodName}}: %v\n", err)
+        return
+    }
+
+    {{- end}}
+    {{- if $callback.HasResult}}
+    slog.Info("Request completed successfully",
+        slog.String("service", "{{$callback.ContractName}}"),
+        slog.String("method", "{{$callback.MethodName}}"),
+        slog.Group("response",
+            slog.Any("result", {{$callback.ResultVar}}),
+        ),
+    )
+    {{- end -}}
+}
+{{end}}

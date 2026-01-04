@@ -1,0 +1,58 @@
+package main
+
+import (
+    "context"
+    "log/slog"
+    "os"
+    "{{.PkgPath}}"
+)
+
+func main() {
+    // Интеграция с существующим логированием в приложении
+    // Предположим, у вас уже есть настроенный logger
+    appLogger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+        Level: slog.LevelInfo,
+        AddSource: true, // Добавляем информацию об источнике лога
+    }))
+    
+    // Устанавливаем его как глобальный logger
+    // Клиент будет использовать этот же logger
+    slog.SetDefault(appLogger)
+    
+    // Инициализируем клиент с логированием
+    client := {{.PkgName}}.New("http://localhost:9000",
+        {{.PkgName}}.LogRequest(),
+        {{.PkgName}}.LogOnError(),
+    )
+    
+    // Использование клиента в контексте вашего приложения
+    ctx := context.Background()
+    
+    // Добавляем контекст приложения к контексту запроса
+    ctx = slog.With(
+        slog.String("app", "my-application"),
+        slog.String("component", "api-client"),
+    ).WithContext(ctx)
+    
+    // Выполняем запрос
+    // Все логи (и клиента, и вашего приложения) будут использовать один logger
+    // с одинаковым форматом и дополнительными полями
+    {{.ServiceVar}} := client.{{.ContractName}}()
+    {{.ResultVar}}, err := {{.MethodCall}}
+    if err != nil {
+        // Ваш код логирования использует тот же logger
+        slog.ErrorContext(ctx, "Failed to process request",
+            slog.String("service", "{{.ContractName}}"),
+            slog.String("method", "{{.MethodName}}"),
+            slog.Any("error", err),
+        )
+        return
+    }
+    
+    // Успешное выполнение
+    slog.InfoContext(ctx, "Request processed successfully",
+        slog.String("service", "{{.ContractName}}"),
+        slog.String("method", "{{.MethodName}}"),
+    )
+}
+

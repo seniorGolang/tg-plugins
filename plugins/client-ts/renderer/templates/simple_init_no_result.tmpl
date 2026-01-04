@@ -1,0 +1,12 @@
+import { Client } from './client';
+
+const client = new Client('http://localhost:9000');
+const {{.ServiceVar}} = client.{{.ClientMethodName}}();
+
+try {
+  await {{.MethodCall}};
+  console.log('Request completed successfully');
+} catch (error) {
+  console.error('Error:', error);
+}
+

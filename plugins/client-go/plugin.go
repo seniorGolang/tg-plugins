@@ -1,6 +1,13 @@
 package main
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"tgp/internal/cleanup"
+	"tgp/plugins/client-go/generator"
 	"tgp/shared"
 )
 
@@ -10,36 +17,147 @@ type ClientGoPlugin struct{}
 // Info возвращает информацию о плагине.
 func (p *ClientGoPlugin) Info() shared.PluginInfo {
 	return shared.PluginInfo{
-		Name:        "client Golang",
+		Name:        "client-go",
 		Persistent:  false,
 		Version:     "2.4.0",
-		Description: "Плагин client-go",
-		Author:      "Rick Sanchez <rick.sanchez@example.com>",
+		Description: translate("Go client generator for HTTP/JSON-RPC servers"),
+		Author:      "AlexK (seniorGolang@gmail.com)",
 		License:     "MIT",
 		Category:    "client",
 		Commands: []shared.Command{
 			{
 				Path:        []string{"client", "go"},
-				Description: "Плагин client-go",
-				Options:     []shared.Option{},
+				Description: translate("Generate Go client"),
+				Options: []shared.Option{
+					{
+						Name:        "out",
+						Short:       "o",
+						Type:        "string",
+						Description: translate("Path to output directory"),
+						Required:    true,
+					},
+					{
+						Name:        "contracts",
+						Short:       "c",
+						Type:        "string",
+						Description: translate("Comma-separated list of contracts for filtering (e.g., \"Contract1,Contract2\")"),
+						Required:    false,
+					},
+					{
+						Name:        "doc-file",
+						Type:        "string",
+						Description: translate("Path to documentation file (default: <out>/README.md)"),
+						Required:    false,
+					},
+					{
+						Name:        "no-doc",
+						Type:        "bool",
+						Description: translate("Disable documentation generation"),
+						Required:    false,
+						Default:     false,
+					},
+					{
+						Name:        "verbose",
+						Short:       "v",
+						Type:        "bool",
+						Description: translate("Verbose output"),
+						Required:    false,
+						Default:     false,
+					},
+				},
 			},
 		},
-		Options: []shared.Option{},
 	}
 }
 
 // Execute выполняет основную логику плагина.
 func (p *ClientGoPlugin) Execute(project shared.Project, rootDir string, options map[string]any, path ...string) (err error) {
+
 	logger := shared.GetLogger()
 
-	logger.Info("clientGo плагин запущен")
+	logger.Info(translate("client-go plugin started"))
 
-	// TODO: Реализовать основную логику плагина
-	// Используйте стандартные Go функции для работы с файлами через WASI:
-	// - os.ReadFile(), os.WriteFile(), os.Open() и т.д.
+	// Преобразуем shared.Project в shared.Project (десериализация)
+	coreProject, err := generator.ConvertFromSharedProject(project)
+	if err != nil {
+		return fmt.Errorf("failed to deserialize project: %w", err)
+	}
 
-	logger.Info("clientGo плагин завершён")
-	return
+	// Получаем out из опций
+	outDir, ok := options["out"].(string)
+	if !ok || outDir == "" {
+		return fmt.Errorf("out option is required and must be a string")
+	}
+
+	// В WASM файловая система монтируется в корень "/", поэтому используем относительные пути
+	// rootDir уже является корнем файловой системы внутри WASM
+	// outDir должен быть относительным путем от rootDir
+	if filepath.IsAbs(outDir) {
+		// Если передан абсолютный путь, вычисляем относительный путь от rootDir
+		relPath, err := filepath.Rel(rootDir, outDir)
+		if err != nil {
+			return fmt.Errorf("failed to compute relative path from rootDir: %w", err)
+		}
+		outDir = relPath
+	}
+
+	// Создаем выходную директорию
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// Получаем опции документации
+	docOpts := generator.DocOptions{
+		Enabled: true,
+	}
+
+	if noDoc, ok := options["no-doc"].(bool); ok && noDoc {
+		docOpts.Enabled = false
+	}
+
+	if docFile, ok := options["doc-file"].(string); ok && docFile != "" {
+		docOpts.FilePath = docFile
+	} else if docOpts.Enabled {
+		docOpts.FilePath = filepath.Join(outDir, "README.md")
+	}
+
+	// Получаем список контрактов для фильтрации
+	var contracts []string
+	if contractsStr, ok := options["contracts"].(string); ok && contractsStr != "" {
+		contracts = strings.Split(contractsStr, ",")
+		for i, contract := range contracts {
+			contracts[i] = strings.TrimSpace(contract)
+		}
+	}
+
+	// Фильтруем контракты, если указаны
+	if len(contracts) > 0 {
+		filteredContracts := make([]*shared.Contract, 0)
+		for _, contract := range coreProject.Contracts {
+			for _, filterName := range contracts {
+				if contract.Name == filterName || contract.ID == filterName {
+					filteredContracts = append(filteredContracts, contract)
+					break
+				}
+			}
+		}
+		coreProject.Contracts = filteredContracts
+	}
+
+	// Очищаем старые сгенерированные файлы перед новой генерацией
+	if err := cleanup.CleanupGeneratedFiles(outDir); err != nil {
+		logger.Warn(fmt.Sprintf("failed to cleanup generated files: error=%v", err))
+		// Не возвращаем ошибку, так как очистка не критична
+	}
+
+	// Генерируем клиент
+	if err := generator.GenerateClient(coreProject, outDir, rootDir, docOpts); err != nil {
+		logger.Error(fmt.Sprintf("failed to generate Go client: error=%v", err))
+		return fmt.Errorf("generate Go client: %w", err)
+	}
+
+	logger.Info(translate("client-go plugin completed"))
+	return nil
 }
 
 // pluginInstance - экземпляр плагина для регистрации.
