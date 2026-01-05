@@ -43,7 +43,6 @@ jobs:
 
       - name: Extract version from tag
         id: version
-        shell: bash
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           if [[ "$TAG" =~ ^v(.+)$ ]]; then
@@ -75,24 +74,45 @@ jobs:
         env:
           GOOS: wasip1
           GOARCH: wasm
-          PLUGIN_NAME: ${{ matrix.plugin }}
+          PLUGIN_DIR_NAME: ${{ matrix.plugin }}
         run: |
-          PLUGIN_DIR="plugins/$PLUGIN_NAME"
+          PLUGIN_DIR="plugins/$PLUGIN_DIR_NAME"
           if [ ! -d "$PLUGIN_DIR" ]; then
-            echo "Плагин $PLUGIN_NAME не найден в $PLUGIN_DIR"
+            echo "Плагин $PLUGIN_DIR_NAME не найден в $PLUGIN_DIR"
             exit 1
           fi
+          # Извлекаем имя плагина из plugin.json (camelCase)
+          PLUGIN_JSON="$PLUGIN_DIR/plugin.json"
+          if [ ! -f "$PLUGIN_JSON" ]; then
+            echo "plugin.json не найден в $PLUGIN_DIR"
+            exit 1
+          fi
+          PLUGIN_NAME=$(jq -r '.name' "$PLUGIN_JSON")
+          if [ -z "$PLUGIN_NAME" ] || [ "$PLUGIN_NAME" = "null" ]; then
+            echo "ОШИБКА: Имя плагина не найдено в plugin.json для $PLUGIN_DIR_NAME"
+            exit 1
+          fi
+          echo "Building plugin: $PLUGIN_NAME (directory: $PLUGIN_DIR_NAME)"
           go build -o "$PLUGIN_DIR/$PLUGIN_NAME.tgp" -buildmode=c-shared ./$PLUGIN_DIR
           sha256sum "$PLUGIN_DIR/$PLUGIN_NAME.tgp" | awk '{print $1}' > "$PLUGIN_DIR/$PLUGIN_NAME.sha256"
+          # Копируем plugin.json с именем плагина
+          cp "$PLUGIN_JSON" "$PLUGIN_DIR/$PLUGIN_NAME.json"
+
+      - name: Extract plugin name from plugin.json
+        id: plugin_name
+        run: |
+          PLUGIN_DIR="plugins/${{ matrix.plugin }}"
+          PLUGIN_NAME=$(jq -r '.name' "$PLUGIN_DIR/plugin.json")
+          echo "name=$PLUGIN_NAME" >> $GITHUB_OUTPUT
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.plugin }}-artifacts
           path: |
-            plugins/${{ matrix.plugin }}/${{ matrix.plugin }}.tgp
-            plugins/${{ matrix.plugin }}/${{ matrix.plugin }}.sha256
-            plugins/${{ matrix.plugin }}/plugin.json
+            plugins/${{ matrix.plugin }}/${{ steps.plugin_name.outputs.name }}.tgp
+            plugins/${{ matrix.plugin }}/${{ steps.plugin_name.outputs.name }}.sha256
+            plugins/${{ matrix.plugin }}/${{ steps.plugin_name.outputs.name }}.json
 
   deploy_all:
     needs: [detect_plugins, build_all]
@@ -130,50 +150,70 @@ jobs:
           FIRST=true
           
           {
-            for PLUGIN in $PLUGINS; do
-              echo "Обработка плагина: $PLUGIN" >&2
+            for PLUGIN_DIR in $PLUGINS; do
+              echo "Обработка плагина: $PLUGIN_DIR" >&2
               
               # Ищем файлы в структуре артефактов
-              # Структура: artifacts/{plugin}-artifacts/{file}
-              ARTIFACT_DIR="artifacts/$PLUGIN-artifacts"
-              ARTIFACT_TGP="$ARTIFACT_DIR/$PLUGIN.tgp"
-              ARTIFACT_SHA256="$ARTIFACT_DIR/$PLUGIN.sha256"
-              ARTIFACT_JSON="$ARTIFACT_DIR/plugin.json"
+              # Структура: artifacts/{plugin-dir}-artifacts/{file}
+              ARTIFACT_DIR="artifacts/$PLUGIN_DIR-artifacts"
+              
+              # Извлекаем имя плагина из plugin.json (camelCase)
+              ARTIFACT_JSON_ORIG="$ARTIFACT_DIR/plugin.json"
+              if [ ! -f "$ARTIFACT_JSON_ORIG" ]; then
+                ARTIFACT_JSON_ORIG=$(find artifacts -path "*$PLUGIN_DIR-artifacts*" -name "plugin.json" -type f | head -1)
+              fi
+              
+              if [ ! -f "$ARTIFACT_JSON_ORIG" ]; then
+                echo "ОШИБКА: plugin.json не найден для плагина $PLUGIN_DIR" >&2
+                exit 1
+              fi
+              
+              PLUGIN_NAME=$(jq -r '.name' "$ARTIFACT_JSON_ORIG")
+              if [ -z "$PLUGIN_NAME" ] || [ "$PLUGIN_NAME" = "null" ]; then
+                echo "ОШИБКА: Имя плагина не найдено в plugin.json для $PLUGIN_DIR" >&2
+                exit 1
+              fi
+              
+              echo "Имя плагина из plugin.json: $PLUGIN_NAME" >&2
+              
+              ARTIFACT_TGP="$ARTIFACT_DIR/$PLUGIN_NAME.tgp"
+              ARTIFACT_SHA256="$ARTIFACT_DIR/$PLUGIN_NAME.sha256"
+              ARTIFACT_JSON="$ARTIFACT_DIR/$PLUGIN_NAME.json"
               
               # Если файлы не найдены по прямому пути, ищем альтернативные пути
               if [ ! -f "$ARTIFACT_TGP" ]; then
-                ARTIFACT_TGP=$(find artifacts -path "*$PLUGIN-artifacts*" -name "$PLUGIN.tgp" -type f | head -1)
+                ARTIFACT_TGP=$(find artifacts -path "*$PLUGIN_DIR-artifacts*" -name "$PLUGIN_NAME.tgp" -type f | head -1)
               fi
               if [ ! -f "$ARTIFACT_SHA256" ]; then
-                ARTIFACT_SHA256=$(find artifacts -path "*$PLUGIN-artifacts*" -name "$PLUGIN.sha256" -type f | head -1)
+                ARTIFACT_SHA256=$(find artifacts -path "*$PLUGIN_DIR-artifacts*" -name "$PLUGIN_NAME.sha256" -type f | head -1)
               fi
               if [ ! -f "$ARTIFACT_JSON" ]; then
-                ARTIFACT_JSON=$(find artifacts -path "*$PLUGIN-artifacts*" -name "plugin.json" -type f | head -1)
+                ARTIFACT_JSON=$(find artifacts -path "*$PLUGIN_DIR-artifacts*" -name "$PLUGIN_NAME.json" -type f | head -1)
               fi
               
               if [ -n "$ARTIFACT_TGP" ] && [ -f "$ARTIFACT_TGP" ] && [ -n "$ARTIFACT_SHA256" ] && [ -f "$ARTIFACT_SHA256" ] && [ -n "$ARTIFACT_JSON" ] && [ -f "$ARTIFACT_JSON" ]; then
-                echo "Найдены файлы для $PLUGIN:" >&2
+                echo "Найдены файлы для $PLUGIN_NAME (директория: $PLUGIN_DIR):" >&2
                 echo "  TGP: $ARTIFACT_TGP" >&2
                 echo "  SHA256: $ARTIFACT_SHA256" >&2
                 echo "  JSON: $ARTIFACT_JSON" >&2
                 
-                cp "$ARTIFACT_TGP" "release/$PLUGIN.tgp"
-                cp "$ARTIFACT_SHA256" "release/$PLUGIN.sha256"
-                cp "$ARTIFACT_JSON" "release/$PLUGIN.json"
+                cp "$ARTIFACT_TGP" "release/$PLUGIN_NAME.tgp"
+                cp "$ARTIFACT_SHA256" "release/$PLUGIN_NAME.sha256"
+                cp "$ARTIFACT_JSON" "release/$PLUGIN_NAME.json"
                 
                 # Добавляем в manifest.json
                 if [ "$FIRST" = true ]; then
-                  MANIFEST_JSON="$MANIFEST_JSON\"$PLUGIN.json\""
+                  MANIFEST_JSON="$MANIFEST_JSON\"$PLUGIN_NAME.json\""
                   FIRST=false
                 else
-                  MANIFEST_JSON="$MANIFEST_JSON,\"$PLUGIN.json\""
+                  MANIFEST_JSON="$MANIFEST_JSON,\"$PLUGIN_NAME.json\""
                 fi
                 
-                echo "release/$PLUGIN.tgp"
-                echo "release/$PLUGIN.sha256"
-                echo "release/$PLUGIN.json"
+                echo "release/$PLUGIN_NAME.tgp"
+                echo "release/$PLUGIN_NAME.sha256"
+                echo "release/$PLUGIN_NAME.json"
               else
-                echo "ОШИБКА: Не найдены файлы для плагина $PLUGIN" >&2
+                echo "ОШИБКА: Не найдены файлы для плагина $PLUGIN_NAME (директория: $PLUGIN_DIR)" >&2
                 echo "  TGP: $ARTIFACT_TGP (существует: $([ -f "$ARTIFACT_TGP" ] && echo 'да' || echo 'нет'))" >&2
                 echo "  SHA256: $ARTIFACT_SHA256 (существует: $([ -f "$ARTIFACT_SHA256" ] && echo 'да' || echo 'нет'))" >&2
                 echo "  JSON: $ARTIFACT_JSON (существует: $([ -f "$ARTIFACT_JSON" ] && echo 'да' || echo 'нет'))" >&2
