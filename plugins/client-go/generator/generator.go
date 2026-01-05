@@ -6,19 +6,19 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"tgp/core"
 	"tgp/plugins/client-go/renderer"
-	"tgp/shared"
 )
 
 // DeserializeProject десериализует Project из JSON.
-func DeserializeProject(projectData interface{}) (*shared.Project, error) {
+func DeserializeProject(projectData interface{}) (*core.Project, error) {
 
 	projectBytes, err := json.Marshal(projectData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal project data: %w", err)
 	}
 
-	var project shared.Project
+	var project core.Project
 	if err := json.Unmarshal(projectBytes, &project); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal project: %w", err)
 	}
@@ -26,8 +26,8 @@ func DeserializeProject(projectData interface{}) (*shared.Project, error) {
 	return &project, nil
 }
 
-// ConvertFromSharedProject конвертирует shared.Project в shared.Project (алиас для совместимости).
-func ConvertFromSharedProject(sharedProject interface{}) (*shared.Project, error) {
+// ConvertFromSharedProject конвертирует core.Project в core.Project (алиас для совместимости).
+func ConvertFromSharedProject(sharedProject interface{}) (*core.Project, error) {
 	return DeserializeProject(sharedProject)
 }
 
@@ -38,9 +38,9 @@ type DocOptions struct {
 }
 
 // GenerateClient генерирует клиент для всех контрактов.
-func GenerateClient(project *shared.Project, outDir, projectRoot string, docOpts DocOptions) error {
+func GenerateClient(project *core.Project, outDir, projectRoot string, docOpts DocOptions) error {
 
-	logger := shared.GetLogger()
+	logger := core.GetLogger()
 	logger.Info(fmt.Sprintf("generating Go client: outDir=%s", outDir))
 
 	gen := &generator{
@@ -60,7 +60,7 @@ func GenerateClient(project *shared.Project, outDir, projectRoot string, docOpts
 }
 
 type generator struct {
-	project     *shared.Project
+	project     *core.Project
 	outDir      string
 	projectRoot string
 	renderer    *renderer.ClientRenderer
@@ -146,4 +146,3 @@ func (g *generator) generate(docOpts DocOptions) error {
 
 	return nil
 }
-

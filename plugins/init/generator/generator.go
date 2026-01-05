@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 //go:embed templates
@@ -24,7 +24,7 @@ var pkgFiles embed.FS
 // baseDir - относительный путь от rootDir (в WASM rootDir монтируется в корень файловой системы).
 func GenerateSkeleton(moduleName, projectName, serviceName, baseDir string) (err error) {
 
-	logger := shared.GetLogger()
+	logger := core.GetLogger()
 
 	// В WASM файловая система монтируется в корень "/", поэтому используем относительные пути
 	// baseDir уже является относительным путем от rootDir
@@ -44,7 +44,7 @@ func GenerateSkeleton(moduleName, projectName, serviceName, baseDir string) (err
 
 	// Инициализируем go модуль
 	logger.Info(fmt.Sprintf("initializing go module: %s", moduleName))
-	_, err = shared.ExecuteCommandInDir("go", []string{"mod", "init", moduleName}, baseDir)
+	_, err = core.ExecuteCommandInDir("go", []string{"mod", "init", moduleName}, baseDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize go module: %w", err)
 	}
@@ -111,14 +111,14 @@ func GenerateSkeleton(moduleName, projectName, serviceName, baseDir string) (err
 	contractsDir := filepath.Join(baseDir, "contracts")
 	// Вычисляем относительный путь от rootDir (который является базой для WASM)
 	// В WASM rootDir монтируется в корень, поэтому используем относительные пути
-	_, err = shared.ExecuteCommandInDir("go", []string{"generate"}, contractsDir)
+	_, err = core.ExecuteCommandInDir("go", []string{"generate"}, contractsDir)
 	if err != nil {
 		return fmt.Errorf("failed to run go generate: %w", err)
 	}
 
 	// Выполняем go mod tidy
 	logger.Info("running go mod tidy")
-	_, err = shared.ExecuteCommandInDir("go", []string{"mod", "tidy"}, baseDir)
+	_, err = core.ExecuteCommandInDir("go", []string{"mod", "tidy"}, baseDir)
 	if err != nil {
 		return fmt.Errorf("failed to run go mod tidy: %w", err)
 	}

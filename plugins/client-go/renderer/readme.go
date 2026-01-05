@@ -15,7 +15,7 @@ import (
 
 	"tgp/internal/markdown"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 //go:embed templates/*.tmpl
@@ -48,7 +48,7 @@ func (r *ClientRenderer) RenderReadmeGo(docOpts interface{}) error {
 	md.PlainText("Автоматически сгенерированная документация API для Go клиента.")
 
 	// Сортируем контракты по имени для консистентности
-	contracts := make([]*shared.Contract, len(r.project.Contracts))
+	contracts := make([]*core.Contract, len(r.project.Contracts))
 	copy(contracts, r.project.Contracts)
 	sort.Slice(contracts, func(i, j int) bool {
 		return contracts[i].Name < contracts[j].Name
@@ -136,13 +136,13 @@ func (r *ClientRenderer) RenderReadmeGo(docOpts interface{}) error {
 	md.LF()
 	md.PlainText(markdown.Bold("Контракты:"))
 	md.LF()
-	
+
 	// Генерируем оглавление контрактов и их методов
-			for _, contract := range contracts {
+	for _, contract := range contracts {
 		contractAnchor := generateAnchor(contract.Name)
 		md.PlainText(fmt.Sprintf("- [%s](#%s)", contract.Name, contractAnchor))
 		md.LF()
-		
+
 		// JSON-RPC методы
 		if r.contains(contract.Annotations, TagServerJsonRPC) {
 			for _, method := range contract.Methods {
@@ -153,7 +153,7 @@ func (r *ClientRenderer) RenderReadmeGo(docOpts interface{}) error {
 				}
 			}
 		}
-		
+
 		// HTTP методы
 		if r.contains(contract.Annotations, TagServerHTTP) {
 			for _, method := range contract.Methods {
@@ -169,7 +169,7 @@ func (r *ClientRenderer) RenderReadmeGo(docOpts interface{}) error {
 					methodTitle := fmt.Sprintf("%s %s", httpMethod, httpPath)
 					methodAnchor := generateAnchor(methodTitle)
 					md.PlainText(fmt.Sprintf("  - [%s](#%s)", methodTitle, methodAnchor))
-				md.LF()
+					md.LF()
 				}
 			}
 		}
@@ -205,7 +205,7 @@ func (r *ClientRenderer) RenderReadmeGo(docOpts interface{}) error {
 	md.LF()
 	if r.HasMetrics() {
 		md.PlainText(fmt.Sprintf("- [Метрики](#%s)", generateAnchor("Метрики")))
-	md.LF()
+		md.LF()
 	}
 	md.HorizontalRule()
 
@@ -277,9 +277,9 @@ func (r *ClientRenderer) renderClientDescription(md *markdown.Markdown) {
 	md.LF()
 
 	// Находим первый доступный контракт и метод для примеров
-	var exampleContract *shared.Contract
-	var exampleMethod *shared.Method
-	
+	var exampleContract *core.Contract
+	var exampleMethod *core.Method
+
 	for _, contract := range r.project.Contracts {
 		if r.contains(contract.Annotations, TagServerJsonRPC) {
 			for _, method := range contract.Methods {
@@ -316,20 +316,20 @@ func (r *ClientRenderer) renderClientDescription(md *markdown.Markdown) {
 	// Пример инициализации клиента
 	md.PlainText(markdown.Bold("Инициализация клиента:"))
 	md.LF()
-	
+
 	if exampleContract != nil && exampleMethod != nil {
 		// Используем реальный контракт и метод
 		serviceVar := ToLowerCamel(exampleContract.Name)
 		args := r.argsWithoutContext(exampleMethod)
 		results := r.resultsWithoutError(exampleMethod)
-		
+
 		var methodCall string
 		var paramValues []string
 		for _, arg := range args {
 			exampleValue := r.generateExampleValueFromVariable(arg, strings.Join(arg.Docs, "\n"), exampleContract.PkgPath)
 			paramValues = append(paramValues, exampleValue)
 		}
-		
+
 		// Используем ctx вместо context.Background() для поддержки заголовков
 		ctxVar := "ctx"
 		if len(paramValues) > 0 {
@@ -337,18 +337,18 @@ func (r *ClientRenderer) renderClientDescription(md *markdown.Markdown) {
 		} else {
 			methodCall = fmt.Sprintf("%s.%s(%s)", serviceVar, exampleMethod.Name, ctxVar)
 		}
-		
+
 		var resultVar string
 		if len(results) > 0 {
 			resultVar = "result"
 		}
-		
+
 		templateData := map[string]interface{}{
-			"PkgPath":     pkgPath,
-			"PkgName":     pkgName,
-			"ServiceVar":  serviceVar,
+			"PkgPath":      pkgPath,
+			"PkgName":      pkgName,
+			"ServiceVar":   serviceVar,
 			"ContractName": exampleContract.Name,
-			"MethodCall":  methodCall,
+			"MethodCall":   methodCall,
 		}
 
 		var codeExample string
@@ -365,33 +365,33 @@ func (r *ClientRenderer) renderClientDescription(md *markdown.Markdown) {
 		md.CodeBlocks(markdown.SyntaxHighlightGo, codeExample)
 	}
 	md.LF()
-	
+
 	md.PlainText(markdown.Bold("Инициализация с опциями:"))
 	md.LF()
-	
+
 	if exampleContract != nil && exampleMethod != nil {
 		serviceVar := ToLowerCamel(exampleContract.Name)
 		args := r.argsWithoutContext(exampleMethod)
 		results := r.resultsWithoutError(exampleMethod)
-		
+
 		var methodCall string
 		var paramValues []string
 		for _, arg := range args {
 			exampleValue := r.generateExampleValueFromVariable(arg, strings.Join(arg.Docs, "\n"), exampleContract.PkgPath)
 			paramValues = append(paramValues, exampleValue)
 		}
-		
+
 		if len(paramValues) > 0 {
 			methodCall = fmt.Sprintf("%s.%s(context.Background(), %s)", serviceVar, exampleMethod.Name, strings.Join(paramValues, ", "))
 		} else {
 			methodCall = fmt.Sprintf("%s.%s(context.Background())", serviceVar, exampleMethod.Name)
 		}
-		
+
 		var resultVar string
 		if len(results) > 0 {
 			resultVar = "result"
 		}
-		
+
 		templateData := map[string]interface{}{
 			"PkgPath":      pkgPath,
 			"PkgName":      pkgName,
@@ -418,19 +418,19 @@ func (r *ClientRenderer) renderClientDescription(md *markdown.Markdown) {
 	// Пример с заголовками
 	md.PlainText(markdown.Bold("Инициализация с кастомными заголовками:"))
 	md.LF()
-	
+
 	if exampleContract != nil && exampleMethod != nil {
 		serviceVar := ToLowerCamel(exampleContract.Name)
 		args := r.argsWithoutContext(exampleMethod)
 		results := r.resultsWithoutError(exampleMethod)
-		
+
 		var methodCall string
 		var paramValues []string
 		for _, arg := range args {
 			exampleValue := r.generateExampleValueFromVariable(arg, strings.Join(arg.Docs, "\n"), exampleContract.PkgPath)
 			paramValues = append(paramValues, exampleValue)
 		}
-		
+
 		// Используем ctx вместо context.Background() для поддержки заголовков
 		ctxVar := "ctx"
 		if len(paramValues) > 0 {
@@ -438,12 +438,12 @@ func (r *ClientRenderer) renderClientDescription(md *markdown.Markdown) {
 		} else {
 			methodCall = fmt.Sprintf("%s.%s(%s)", serviceVar, exampleMethod.Name, ctxVar)
 		}
-		
+
 		var resultVar string
 		if len(results) > 0 {
 			resultVar = "result"
 		}
-		
+
 		templateData := map[string]interface{}{
 			"PkgPath":      pkgPath,
 			"PkgName":      pkgName,
@@ -470,39 +470,39 @@ func (r *ClientRenderer) renderClientDescription(md *markdown.Markdown) {
 
 	// Описание опций
 	r.renderClientOptions(md, pkgPath, pkgName)
-	
+
 	md.HorizontalRule()
 }
 
 // renderContract генерирует документацию для контракта
-func (r *ClientRenderer) renderContract(md *markdown.Markdown, contract *shared.Contract, outDir string, typeUsages map[string]*typeUsage) {
-		contractAnchor := generateAnchor(contract.Name)
-		md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", contractAnchor))
-		md.LF()
-		md.H2(contract.Name)
+func (r *ClientRenderer) renderContract(md *markdown.Markdown, contract *core.Contract, outDir string, typeUsages map[string]*typeUsage) {
+	contractAnchor := generateAnchor(contract.Name)
+	md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", contractAnchor))
+	md.LF()
+	md.H2(contract.Name)
 
-		// Описание контракта из документации
-		contractDesc := filterDocsComments(contract.Docs)
-		if len(contractDesc) > 0 {
-			md.PlainText(strings.Join(contractDesc, "\n"))
+	// Описание контракта из документации
+	contractDesc := filterDocsComments(contract.Docs)
+	if len(contractDesc) > 0 {
+		md.PlainText(strings.Join(contractDesc, "\n"))
 		md.LF()
-		}
+	}
 
-		// JSON-RPC методы
+	// JSON-RPC методы
 	if r.contains(contract.Annotations, TagServerJsonRPC) {
-			for _, method := range contract.Methods {
+		for _, method := range contract.Methods {
 			if !r.methodIsJsonRPC(contract, method) {
-					continue
+				continue
 			}
 			r.renderMethodDoc(md, method, contract, outDir, typeUsages)
-			}
 		}
+	}
 
-		// HTTP методы
+	// HTTP методы
 	if r.contains(contract.Annotations, TagServerHTTP) {
-			for _, method := range contract.Methods {
+		for _, method := range contract.Methods {
 			if !r.methodIsHTTP(method) {
-					continue
+				continue
 			}
 			r.renderHTTPMethodDoc(md, method, contract, outDir, typeUsages)
 		}
@@ -656,13 +656,13 @@ client := %s.New("http://localhost:9000",
 		}...)
 	}
 
-		if r.HasJsonRPC() {
+	if r.HasJsonRPC() {
 		options = append(options, struct {
 			name        string
 			description string
 			signature   string
 			example     string
-		}		{
+		}{
 			name:        "AllowUnknownFields",
 			description: "Разрешает неизвестные поля при десериализации JSON для JSON-RPC и HTTP методов. По умолчанию JSON-RPC клиент использует строгую проверку структуры ответа (DisallowUnknownFields), а HTTP методы разрешают неизвестные поля. При установке allowUnknownFields=true оба типа клиентов будут разрешать неизвестные поля, при false - запрещать.",
 			signature:   "func AllowUnknownFields(allowUnknownFields bool) Option",
@@ -867,10 +867,10 @@ func (r *ClientRenderer) renderLoggingSection(md *markdown.Markdown, outDir stri
 	md.PlainText("`slog` поддерживает различные бэкенды через реализацию интерфейса `slog.Handler`. В качестве бэкенда можно использовать:")
 	md.LF()
 	md.BulletList(
-		markdown.Bold("zerolog") + " — один из самых эффективных и производительных бэкендов для slog. Обеспечивает высокую скорость записи логов и минимальные накладные расходы. Рекомендуется для production окружений с высокими нагрузками.",
-		markdown.Bold("zap") + " — популярный структурированный логгер от Uber с высокой производительностью. Поддерживает различные форматы вывода и настройки производительности.",
-		markdown.Bold("slog.NewJSONHandler") + " — стандартный JSON handler из библиотеки `log/slog`. Простой в использовании, подходит для большинства случаев.",
-		markdown.Bold("slog.NewTextHandler") + " — текстовый handler для человекочитаемого формата. Удобен для разработки и отладки.",
+		markdown.Bold("zerolog")+" — один из самых эффективных и производительных бэкендов для slog. Обеспечивает высокую скорость записи логов и минимальные накладные расходы. Рекомендуется для production окружений с высокими нагрузками.",
+		markdown.Bold("zap")+" — популярный структурированный логгер от Uber с высокой производительностью. Поддерживает различные форматы вывода и настройки производительности.",
+		markdown.Bold("slog.NewJSONHandler")+" — стандартный JSON handler из библиотеки `log/slog`. Простой в использовании, подходит для большинства случаев.",
+		markdown.Bold("slog.NewTextHandler")+" — текстовый handler для человекочитаемого формата. Удобен для разработки и отладки.",
 		"Другие популярные бэкенды — можно использовать любую библиотеку логирования, которая реализует интерфейс `slog.Handler` (например, logrus и др.).",
 	)
 	md.LF()
@@ -879,8 +879,8 @@ func (r *ClientRenderer) renderLoggingSection(md *markdown.Markdown, outDir stri
 	md.PlainText(markdown.Bold("Опции логирования:"))
 	md.LF()
 	md.BulletList(
-		markdown.Bold("LogRequest()") + " - включает логирование всех HTTP/JSON-RPC запросов на уровне Debug. Каждый лог содержит метод запроса и команду curl для воспроизведения запроса.",
-		markdown.Bold("LogOnError()") + " - включает логирование только при ошибках на уровне Error. Логи содержат метод запроса, команду curl и информацию об ошибке.",
+		markdown.Bold("LogRequest()")+" - включает логирование всех HTTP/JSON-RPC запросов на уровне Debug. Каждый лог содержит метод запроса и команду curl для воспроизведения запроса.",
+		markdown.Bold("LogOnError()")+" - включает логирование только при ошибках на уровне Error. Логи содержат метод запроса, команду curl и информацию об ошибке.",
 	)
 	md.LF()
 

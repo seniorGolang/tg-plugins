@@ -9,7 +9,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // RenderClient генерирует базовый клиент с поддержкой JSON-RPC и HTTP
@@ -130,7 +130,7 @@ func (r *ClientRenderer) clientStructFunc(outDir string) Code {
 }
 
 // findContract находит контракт по имени.
-func (r *ClientRenderer) findContract(name string) *shared.Contract {
+func (r *ClientRenderer) findContract(name string) *core.Contract {
 	for _, contract := range r.project.Contracts {
 		if contract.Name == name {
 			return contract
@@ -138,4 +138,3 @@ func (r *ClientRenderer) findContract(name string) *shared.Contract {
 	}
 	return nil
 }
-

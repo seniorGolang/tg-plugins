@@ -12,11 +12,11 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // httpClientMethodFunc генерирует метод для HTTP вызова
-func (r *ClientRenderer) httpClientMethodFunc(ctx context.Context, contract *shared.Contract, method *shared.Method, outDir string) Code {
+func (r *ClientRenderer) httpClientMethodFunc(ctx context.Context, contract *core.Contract, method *core.Method, outDir string) Code {
 
 	c := Comment(fmt.Sprintf("%s performs the %s operation.", method.Name, method.Name))
 	c.Line()
@@ -43,40 +43,40 @@ func (r *ClientRenderer) httpClientMethodFunc(ctx context.Context, contract *sha
 					),
 					If(Id("success")).Block(
 						Id("cli").Dot("Client").Dot("metrics").Dot("RequestCount").Dot("WithLabelValues").Call(
-						Lit("client_"+r.contractNameToLowerCamel(contract)),
-						Lit(r.methodNameToLowerCamel(method)),
+							Lit("client_"+r.contractNameToLowerCamel(contract)),
+							Lit(r.methodNameToLowerCamel(method)),
 							Lit("true"),
 							Lit("0")).
 							Dot("Add").Call(Lit(1)),
 						Id("cli").Dot("Client").Dot("metrics").Dot("RequestCountAll").Dot("WithLabelValues").Call(
-						Lit("client_"+r.contractNameToLowerCamel(contract)),
-						Lit(r.methodNameToLowerCamel(method)),
+							Lit("client_"+r.contractNameToLowerCamel(contract)),
+							Lit(r.methodNameToLowerCamel(method)),
 							Lit("true"),
 							Lit("0")).
 							Dot("Add").Call(Lit(1)),
 						Id("cli").Dot("Client").Dot("metrics").Dot("RequestLatency").Dot("WithLabelValues").Call(
-						Lit("client_"+r.contractNameToLowerCamel(contract)),
-						Lit(r.methodNameToLowerCamel(method)),
+							Lit("client_"+r.contractNameToLowerCamel(contract)),
+							Lit(r.methodNameToLowerCamel(method)),
 							Lit("true"),
 							Lit("0")).
 							Dot("Observe").Call(Qual(PackageTime, "Since").Call(Id("_begin")).Dot("Seconds").Call()),
 					).Else().Block(
 						Id("errCodeStr").Op(":=").Qual(PackageStrconv, "Itoa").Call(Id("errCode")),
 						Id("cli").Dot("Client").Dot("metrics").Dot("RequestCount").Dot("WithLabelValues").Call(
-						Lit("client_"+r.contractNameToLowerCamel(contract)),
-						Lit(r.methodNameToLowerCamel(method)),
+							Lit("client_"+r.contractNameToLowerCamel(contract)),
+							Lit(r.methodNameToLowerCamel(method)),
 							Lit("false"),
 							Id("errCodeStr")).
 							Dot("Add").Call(Lit(1)),
 						Id("cli").Dot("Client").Dot("metrics").Dot("RequestCountAll").Dot("WithLabelValues").Call(
-						Lit("client_"+r.contractNameToLowerCamel(contract)),
-						Lit(r.methodNameToLowerCamel(method)),
+							Lit("client_"+r.contractNameToLowerCamel(contract)),
+							Lit(r.methodNameToLowerCamel(method)),
 							Lit("false"),
 							Id("errCodeStr")).
 							Dot("Add").Call(Lit(1)),
 						Id("cli").Dot("Client").Dot("metrics").Dot("RequestLatency").Dot("WithLabelValues").Call(
-						Lit("client_"+r.contractNameToLowerCamel(contract)),
-						Lit(r.methodNameToLowerCamel(method)),
+							Lit("client_"+r.contractNameToLowerCamel(contract)),
+							Lit(r.methodNameToLowerCamel(method)),
 							Lit("false"),
 							Id("errCodeStr")).
 							Dot("Observe").Call(Qual(PackageTime, "Since").Call(Id("_begin")).Dot("Seconds").Call()),

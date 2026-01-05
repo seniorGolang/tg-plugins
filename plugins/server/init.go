@@ -1,9 +1,9 @@
 package main
 
 import (
-	"tgp/shared"
+	"tgp/core"
 )
 
 func init() {
-	shared.SetPluginInstance(pluginInstance)
+	core.SetPluginInstance(pluginInstance)
 }

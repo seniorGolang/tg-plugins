@@ -11,11 +11,11 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // RenderServiceClient генерирует объединенный клиент для сервиса с поддержкой JSON-RPC и HTTP методов
-func (r *ClientRenderer) RenderServiceClient(contract *shared.Contract) error {
+func (r *ClientRenderer) RenderServiceClient(contract *core.Contract) error {
 
 	outDir := r.outDir
 	pkgName := filepath.Base(outDir)
@@ -23,7 +23,7 @@ func (r *ClientRenderer) RenderServiceClient(contract *shared.Contract) error {
 	srcFile.PackageComment(DoNotEdit)
 
 	ctx := context.WithValue(context.Background(), keyCode, srcFile) // nolint
-	ctx = context.WithValue(ctx, keyPackage, pkgName)               // nolint
+	ctx = context.WithValue(ctx, keyPackage, pkgName)                // nolint
 
 	// Импорты для JSON-RPC
 	if r.contains(contract.Annotations, TagServerJsonRPC) {
@@ -31,7 +31,7 @@ func (r *ClientRenderer) RenderServiceClient(contract *shared.Contract) error {
 		srcFile.ImportName(PackageFiber, "fiber")
 		srcFile.ImportName(fmt.Sprintf("%s/jsonrpc", r.pkgPath(outDir)), "jsonrpc")
 	}
-	
+
 	// Импорты для HTTP
 	if r.contains(contract.Annotations, TagServerHTTP) {
 		srcFile.ImportName(PackageContext, "context")

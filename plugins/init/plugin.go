@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"tgp/core"
 	"tgp/internal/cleanup"
 	"tgp/plugins/init/generator"
-	"tgp/shared"
 )
 
 //go:embed plugin.md
@@ -17,8 +17,8 @@ var pluginDoc string
 type InitPlugin struct{}
 
 // Info возвращает информацию о плагине.
-func (p *InitPlugin) Info() shared.PluginInfo {
-	return shared.PluginInfo{
+func (p *InitPlugin) Info() core.PluginInfo {
+	return core.PluginInfo{
 		Name:        "init",
 		Persistent:  false,
 		Version:     "2.4.0",
@@ -27,18 +27,18 @@ func (p *InitPlugin) Info() shared.PluginInfo {
 		Author:      "seniorGolang",
 		License:     "MIT",
 		Category:    "init",
-		Commands: []shared.Command{
+		Commands: []core.Command{
 			{
 				Path:        []string{"init"},
 				Description: translate("Initialize new project with basic structure"),
-				Options: []shared.Option{
+				Options: []core.Option{
 					{
 						Name:        "module",
 						Short:       "m",
 						Type:        "string",
 						Description: translate("Go module name"),
 						Required:    false,
-		},
+					},
 					{
 						Name:        "project",
 						Short:       "p",
@@ -70,29 +70,36 @@ func (p *InitPlugin) Info() shared.PluginInfo {
 }
 
 // Execute выполняет основную логику плагина.
-func (p *InitPlugin) Execute(project shared.Project, rootDir string, options map[string]any, path ...string) (err error) {
+func (p *InitPlugin) Execute(rootDir string, request core.Storage, path ...string) (response core.Storage, err error) {
 
-	logger := shared.GetLogger()
+	logger := core.GetLogger()
 
 	logger.Info(translate("init plugin started"))
 
-	// Получаем параметры
-	projectName, ok := options["project"].(string)
+	// Получаем параметры из request
+	projectNameVal, ok := request.Get("project")
+	if !ok {
+		return nil, fmt.Errorf("project option is required")
+	}
+	projectName, ok := projectNameVal.(string)
 	if !ok || projectName == "" {
-		return fmt.Errorf("project option is required and must be a string")
+		return nil, fmt.Errorf("project option is required and must be a string")
 	}
 
-	moduleName, _ := options["module"].(string)
+	moduleNameVal, _ := request.Get("module")
+	moduleName, _ := moduleNameVal.(string)
 	if moduleName == "" {
 		moduleName = projectName
 	}
 
-	serviceName, _ := options["service"].(string)
+	serviceNameVal, _ := request.Get("service")
+	serviceName, _ := serviceNameVal.(string)
 	if serviceName == "" {
 		serviceName = "someService"
 	}
 
-	baseDir, _ := options["dir"].(string)
+	baseDirVal, _ := request.Get("dir")
+	baseDir, _ := baseDirVal.(string)
 	if baseDir == "" {
 		baseDir = projectName
 	}
@@ -104,7 +111,7 @@ func (p *InitPlugin) Execute(project shared.Project, rootDir string, options map
 		// Если передан абсолютный путь, вычисляем относительный путь от rootDir
 		relPath, err := filepath.Rel(rootDir, baseDir)
 		if err != nil {
-			return fmt.Errorf("failed to compute relative path from rootDir: %w", err)
+			return nil, fmt.Errorf("failed to compute relative path from rootDir: %w", err)
 		}
 		baseDir = relPath
 	}
@@ -121,13 +128,19 @@ func (p *InitPlugin) Execute(project shared.Project, rootDir string, options map
 	// Инициализируем проект
 	if err = generator.GenerateSkeleton(moduleName, projectName, serviceName, baseDir); err != nil {
 		logger.Error(fmt.Sprintf("failed to initialize project: error=%v", err))
-		return fmt.Errorf("initialize project: %w", err)
+		return nil, fmt.Errorf("initialize project: %w", err)
 	}
 
 	logger.Info(fmt.Sprintf("project initialized successfully: baseDir=%s", baseDir))
 
-	return nil
+	// Создаем response
+	response = core.NewStorage()
+	if err = response.Set("baseDir", baseDir); err != nil {
+		return nil, fmt.Errorf("failed to set response: %w", err)
+	}
+
+	return response, nil
 }
 
 // pluginInstance - экземпляр плагина для регистрации.
-var pluginInstance shared.Plugin = &InitPlugin{}
+var pluginInstance core.Plugin = &InitPlugin{}

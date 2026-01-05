@@ -11,11 +11,11 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // RenderExchange генерирует файл exchange для контракта.
-func (r *ClientRenderer) RenderExchange(contract *shared.Contract) error {
+func (r *ClientRenderer) RenderExchange(contract *core.Contract) error {
 
 	outDir := r.outDir
 	pkgName := filepath.Base(outDir)
@@ -23,7 +23,7 @@ func (r *ClientRenderer) RenderExchange(contract *shared.Contract) error {
 	srcFile.PackageComment(DoNotEdit)
 
 	ctx := context.WithValue(context.Background(), keyCode, srcFile) // nolint
-	ctx = context.WithValue(ctx, keyPackage, pkgName)               // nolint
+	ctx = context.WithValue(ctx, keyPackage, pkgName)                // nolint
 
 	for _, method := range contract.Methods {
 		srcFile.Add(r.exchange(ctx, contract, r.requestStructName(contract, method), r.fieldsArgument(method))).Line()
@@ -32,7 +32,7 @@ func (r *ClientRenderer) RenderExchange(contract *shared.Contract) error {
 	return srcFile.Save(path.Join(outDir, strings.ToLower(contract.Name)+"-exchange.go"))
 }
 
-func (r *ClientRenderer) exchange(ctx context.Context, contract *shared.Contract, name string, fields []exchangeField) Code {
+func (r *ClientRenderer) exchange(ctx context.Context, contract *core.Contract, name string, fields []exchangeField) Code {
 
 	if len(fields) == 0 {
 		return Comment("Formal exchange type, please do not delete.").Line().Type().Id(name).Struct()
@@ -71,7 +71,7 @@ func (r *ClientRenderer) structField(ctx context.Context, field exchangeField, t
 		// Проверяем, есть ли информация о массивах/map
 		if field.isSlice || field.arrayLen > 0 || field.mapKeyID != "" {
 			// Создаем временный Variable для передачи в fieldTypeFromVariable
-			v := &shared.Variable{
+			v := &core.Variable{
 				TypeID:           field.typeID,
 				NumberOfPointers: field.numberOfPointers,
 				IsSlice:          field.isSlice,

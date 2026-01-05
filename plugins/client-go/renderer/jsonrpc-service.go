@@ -8,11 +8,11 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // jsonrpcClientMethodFunc генерирует метод для JSON-RPC вызова
-func (r *ClientRenderer) jsonrpcClientMethodFunc(ctx context.Context, contract *shared.Contract, method *shared.Method, outDir string) Code {
+func (r *ClientRenderer) jsonrpcClientMethodFunc(ctx context.Context, contract *core.Contract, method *core.Method, outDir string) Code {
 
 	return Func().
 		Params(Id("cli").Op("*").Id("Client" + contract.Name)).
@@ -137,7 +137,7 @@ func (r *ClientRenderer) jsonrpcClientMethodFunc(ctx context.Context, contract *
 }
 
 // jsonrpcClientRequestFunc генерирует функцию для создания JSON-RPC запроса с callback
-func (r *ClientRenderer) jsonrpcClientRequestFunc(ctx context.Context, contract *shared.Contract, method *shared.Method, outDir string) Code {
+func (r *ClientRenderer) jsonrpcClientRequestFunc(ctx context.Context, contract *core.Contract, method *core.Method, outDir string) Code {
 
 	return Func().Params(Id("cli").Op("*").Id("Client"+contract.Name)).
 		Id("Req"+method.Name).
@@ -213,4 +213,3 @@ func (r *ClientRenderer) jsonrpcClientRequestFunc(ctx context.Context, contract 
 		bg.Return()
 	})
 }
-

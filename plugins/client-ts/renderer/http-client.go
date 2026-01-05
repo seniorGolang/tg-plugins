@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"path"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // renderHTTPClient генерирует HTTP клиент для контракта
 // RenderHTTPClientClass генерирует HTTP клиент для контракта
-func (r *ClientRenderer) RenderHTTPClientClass(contract *shared.Contract) (err error) {
-	logger := shared.GetLogger()
+func (r *ClientRenderer) RenderHTTPClientClass(contract *core.Contract) (err error) {
+	logger := core.GetLogger()
 
 	// Отладка: проверяем входные данные
 	if contract == nil {
@@ -197,11 +197,11 @@ func (r *ClientRenderer) RenderHTTPClientClass(contract *shared.Contract) (err e
 }
 
 // renderHTTPClientClass генерирует класс HTTP клиента
-func (r *ClientRenderer) renderHTTPClientClass(contract *shared.Contract) *tsg.Statement {
+func (r *ClientRenderer) renderHTTPClientClass(contract *core.Contract) *tsg.Statement {
 	// Сохраняем contract в локальную переменную для использования в замыкании
 	// Это гарантирует, что contract не будет изменен между установкой r.contract и использованием в замыкании
 	currentContract := contract
-	logger := shared.GetLogger()
+	logger := core.GetLogger()
 	logger.Debug(fmt.Sprintf("renderHTTPClientClass: contract=%s, pkgPath=%s, r.contract=%v", currentContract.Name, currentContract.PkgPath, r.contract != nil))
 
 	stmt := tsg.NewStatement()

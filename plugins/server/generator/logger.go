@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync/atomic"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 var (
@@ -40,7 +40,7 @@ func IsVerbose() bool {
 func logVerbose(msg string, args ...any) {
 
 	if IsVerbose() {
-		logger := shared.GetLogger()
+		logger := core.GetLogger()
 		// Форматируем сообщение с аргументами
 		formattedMsg := msg
 		if len(args) > 0 {
@@ -94,7 +94,7 @@ func resetStats() {
 // logStats логирует статистику генерации.
 func logStats() {
 
-	logger := shared.GetLogger()
+	logger := core.GetLogger()
 	files := atomic.LoadInt64(&stats.filesGenerated)
 	lines := atomic.LoadInt64(&stats.linesGenerated)
 	hits := atomic.LoadInt64(&stats.cacheHits)

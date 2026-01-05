@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"tgp/core"
 	"tgp/plugins/client-ts/tsg"
-	"tgp/shared"
 )
 
 // errorInfo структура для хранения информации об ошибке
@@ -21,7 +21,7 @@ type errorInfo struct {
 
 // collectMethodErrors собирает информацию об ошибках метода
 // Возвращает map с ключом "pkgPath:typeName" и значением errorInfo
-func (r *ClientRenderer) collectMethodErrors(method *shared.Method, contract *shared.Contract) map[string]errorInfo {
+func (r *ClientRenderer) collectMethodErrors(method *core.Method, contract *core.Contract) map[string]errorInfo {
 
 	errorsMap := make(map[string]errorInfo)
 
@@ -76,16 +76,16 @@ func (r *ClientRenderer) renderErrorType(errInfo errorInfo) *tsg.Statement {
 	stmt := tsg.NewStatement()
 
 	// Ищем структуру ошибки в project.Types
-	var structType *shared.Type
+	var structType *core.Type
 	typeID := fmt.Sprintf("%s:%s", errInfo.pkgPath, errInfo.typeName)
-	if typ, ok := r.project.Types[typeID]; ok && typ.Kind == shared.TypeKindStruct {
+	if typ, ok := r.project.Types[typeID]; ok && typ.Kind == core.TypeKindStruct {
 		structType = typ
 	}
 
 	// Если не нашли по полному пути, пробуем найти по имени типа
 	if structType == nil {
 		for _, typ := range r.project.Types {
-			if typ.Kind == shared.TypeKindStruct && typ.TypeName == errInfo.typeName {
+			if typ.Kind == core.TypeKindStruct && typ.TypeName == errInfo.typeName {
 				structType = typ
 				break
 			}
@@ -129,14 +129,14 @@ func (r *ClientRenderer) renderErrorType(errInfo errorInfo) *tsg.Statement {
 				}
 
 				// Определяем тип поля
-				fieldVar := &shared.Variable{
+				fieldVar := &core.Variable{
 					Name:             field.Name,
-					TypeID:            field.TypeID,
-					NumberOfPointers:  field.NumberOfPointers,
-					IsSlice:           field.IsSlice,
-					ArrayLen:           field.ArrayLen,
-					MapKeyID:           field.MapKeyID,
-					MapValueID:         field.MapValueID,
+					TypeID:           field.TypeID,
+					NumberOfPointers: field.NumberOfPointers,
+					IsSlice:          field.IsSlice,
+					ArrayLen:         field.ArrayLen,
+					MapKeyID:         field.MapKeyID,
+					MapValueID:       field.MapValueID,
 				}
 				// Используем PkgPath из структуры, если он есть
 				pkgPath := errInfo.pkgPath
@@ -273,4 +273,3 @@ func (r *ClientRenderer) getHTTPStatusText(code int) string {
 	}
 	return fmt.Sprintf("HTTP Error %d", code)
 }
-

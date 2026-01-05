@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // typeUsage содержит информацию об использовании типа
@@ -102,14 +102,14 @@ func (r *ClientRenderer) collectStructTypes() map[string]*typeUsage {
 }
 
 // getStructType получает структуру из типа (включая импортированные)
-func (r *ClientRenderer) getStructType(typeID, pkgPath string) (structType *shared.Type, typeName string, pkg string) {
+func (r *ClientRenderer) getStructType(typeID, pkgPath string) (structType *core.Type, typeName string, pkg string) {
 	typ, ok := r.project.Types[typeID]
 	if !ok {
 		return nil, "", ""
 	}
 
 	// Проверяем, является ли тип структурой
-	if typ.Kind != shared.TypeKindStruct || typ.TypeName == "" {
+	if typ.Kind != core.TypeKindStruct || typ.TypeName == "" {
 		return nil, "", ""
 	}
 
@@ -124,7 +124,7 @@ func (r *ClientRenderer) getStructType(typeID, pkgPath string) (structType *shar
 }
 
 // goTypeStringFromVariable возвращает строковое представление Go типа из Variable
-func (r *ClientRenderer) goTypeStringFromVariable(variable *shared.Variable, pkgPath string) string {
+func (r *ClientRenderer) goTypeStringFromVariable(variable *core.Variable, pkgPath string) string {
 	// Обрабатываем массивы и слайсы
 	if variable.IsSlice || variable.ArrayLen > 0 {
 		elemType := r.goTypeString(variable.TypeID, pkgPath)
@@ -146,7 +146,7 @@ func (r *ClientRenderer) goTypeStringFromVariable(variable *shared.Variable, pkg
 }
 
 // goTypeStringFromStructField возвращает строковое представление Go типа из StructField
-func (r *ClientRenderer) goTypeStringFromStructField(field *shared.StructField, pkgPath string) string {
+func (r *ClientRenderer) goTypeStringFromStructField(field *core.StructField, pkgPath string) string {
 	// Обрабатываем массивы и слайсы
 	if field.IsSlice || field.ArrayLen > 0 {
 		elemType := r.goTypeString(field.TypeID, pkgPath)
@@ -219,9 +219,9 @@ func (r *ClientRenderer) goTypeString(typeID, pkgPath string) string {
 
 	// Обрабатываем в зависимости от Kind
 	switch typ.Kind {
-	case shared.TypeKindString, shared.TypeKindInt, shared.TypeKindInt8, shared.TypeKindInt16, shared.TypeKindInt32, shared.TypeKindInt64,
-		shared.TypeKindUint, shared.TypeKindUint8, shared.TypeKindUint16, shared.TypeKindUint32, shared.TypeKindUint64,
-		shared.TypeKindFloat32, shared.TypeKindFloat64, shared.TypeKindBool, shared.TypeKindByte, shared.TypeKindRune, shared.TypeKindError, shared.TypeKindAny:
+	case core.TypeKindString, core.TypeKindInt, core.TypeKindInt8, core.TypeKindInt16, core.TypeKindInt32, core.TypeKindInt64,
+		core.TypeKindUint, core.TypeKindUint8, core.TypeKindUint16, core.TypeKindUint32, core.TypeKindUint64,
+		core.TypeKindFloat32, core.TypeKindFloat64, core.TypeKindBool, core.TypeKindByte, core.TypeKindRune, core.TypeKindError, core.TypeKindAny:
 		if typ.ImportPkgPath != "" && typ.TypeName != "" {
 			alias := typ.ImportAlias
 			if alias == "" {
@@ -230,7 +230,7 @@ func (r *ClientRenderer) goTypeString(typeID, pkgPath string) string {
 			return fmt.Sprintf("%s.%s", alias, typ.TypeName)
 		}
 		return string(typ.Kind)
-	case shared.TypeKindStruct:
+	case core.TypeKindStruct:
 		structName := typ.TypeName
 		if structName == "" {
 			if strings.Contains(typeID, ":") {
@@ -254,14 +254,14 @@ func (r *ClientRenderer) goTypeString(typeID, pkgPath string) string {
 		if structName != "" {
 			return structName
 		}
-	case shared.TypeKindArray:
+	case core.TypeKindArray:
 		if typ.IsSlice {
 			elemType := r.goTypeString(typ.ArrayOfID, pkgPath)
 			return fmt.Sprintf("[]%s", elemType)
 		}
 		elemType := r.goTypeString(typ.ArrayOfID, pkgPath)
 		return fmt.Sprintf("[%d]%s", typ.ArrayLen, elemType)
-	case shared.TypeKindMap:
+	case core.TypeKindMap:
 		keyType := r.goTypeString(typ.MapKeyID, pkgPath)
 		valueType := r.goTypeString(typ.MapValueID, pkgPath)
 		return fmt.Sprintf("map[%s]%s", keyType, valueType)
@@ -295,7 +295,7 @@ func (r *ClientRenderer) goTypeString(typeID, pkgPath string) string {
 }
 
 // jsonName извлекает имя JSON поля из тегов
-func (r *ClientRenderer) jsonName(field *shared.StructField) (value string, inline bool) {
+func (r *ClientRenderer) jsonName(field *core.StructField) (value string, inline bool) {
 	if tagValues, ok := field.Tags["json"]; ok {
 		for _, val := range tagValues {
 			if val == "inline" {
@@ -312,4 +312,3 @@ func (r *ClientRenderer) jsonName(field *shared.StructField) (value string, inli
 	}
 	return
 }
-

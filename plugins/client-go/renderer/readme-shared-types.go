@@ -9,7 +9,7 @@ import (
 
 	"tgp/internal/markdown"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // renderAllTypes генерирует секцию "Общие типы" для всех типов, используемых в контрактах
@@ -44,8 +44,8 @@ func (r *ClientRenderer) renderAllTypes(md *markdown.Markdown, allTypes map[stri
 
 		// Проверяем, является ли тип из внешней библиотеки
 		isExternal := typ != nil && typ.ImportPkgPath != "" && !r.isTypeFromCurrentProject(typ.ImportPkgPath)
-		
-		if typ != nil && typ.Kind == shared.TypeKindStruct && !isExternal {
+
+		if typ != nil && typ.Kind == core.TypeKindStruct && !isExternal {
 			// Локальная структура - выводим таблицу полей
 			r.renderStructTypeTable(md, typ, usage.fullTypeName, usage.pkgPath)
 		} else {
@@ -54,7 +54,7 @@ func (r *ClientRenderer) renderAllTypes(md *markdown.Markdown, allTypes map[stri
 			md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", typeAnchor))
 			md.LF()
 			md.H4(usage.fullTypeName)
-			
+
 			// Если тип из внешней библиотеки, добавляем информацию о библиотеке
 			if isExternal {
 				importPath := typ.ImportPkgPath
@@ -62,7 +62,7 @@ func (r *ClientRenderer) renderAllTypes(md *markdown.Markdown, allTypes map[stri
 				md.PlainText(fmt.Sprintf("Тип из внешней библиотеки: [%s](%s)", importPath, libURL))
 				md.LF()
 			}
-			
+
 			md.LF()
 		}
 	}
@@ -71,7 +71,7 @@ func (r *ClientRenderer) renderAllTypes(md *markdown.Markdown, allTypes map[stri
 }
 
 // getTypeLinkFromStructField возвращает ссылку на тип для поля структуры
-func (r *ClientRenderer) getTypeLinkFromStructField(field *shared.StructField, pkgPath string) string {
+func (r *ClientRenderer) getTypeLinkFromStructField(field *core.StructField, pkgPath string) string {
 	switch {
 	case field.IsSlice || field.ArrayLen > 0:
 		// Для массивов/слайсов - ссылка на тип элемента (без [])
@@ -98,7 +98,7 @@ func (r *ClientRenderer) getTypeLinkFromStructField(field *shared.StructField, p
 }
 
 // getTypeLinkFromVariable возвращает ссылку на тип для переменной (параметр или возвращаемое значение)
-func (r *ClientRenderer) getTypeLinkFromVariable(variable *shared.Variable, pkgPath string) string {
+func (r *ClientRenderer) getTypeLinkFromVariable(variable *core.Variable, pkgPath string) string {
 	switch {
 	case variable.IsSlice || variable.ArrayLen > 0:
 		// Для массивов/слайсов - ссылка на тип элемента (без [])
@@ -160,7 +160,7 @@ func (r *ClientRenderer) getTypeLink(typeID, pkgPath string) string {
 
 // renderStructTypeTable генерирует таблицу для типа структуры
 // Вызывается только для локальных типов (не из внешних библиотек)
-func (r *ClientRenderer) renderStructTypeTable(md *markdown.Markdown, structType *shared.Type, typeName string, pkgPath string) {
+func (r *ClientRenderer) renderStructTypeTable(md *markdown.Markdown, structType *core.Type, typeName string, pkgPath string) {
 	// Заголовок таблицы типа
 	typeAnchor := generateAnchor(typeName)
 	md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", typeAnchor))

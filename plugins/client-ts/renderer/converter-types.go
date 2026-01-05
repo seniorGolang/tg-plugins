@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // hasMarshaler проверяет, имеет ли тип соответствующий маршалер (Marshaler/Unmarshaler)
 // Проверяет только сам тип, без рекурсии по вложенным типам
-func (r *ClientRenderer) hasMarshaler(typ *shared.Type, isArgument bool) bool {
+func (r *ClientRenderer) hasMarshaler(typ *core.Type, isArgument bool) bool {
 	if typ == nil {
 		return false
 	}
@@ -35,7 +35,7 @@ func (r *ClientRenderer) hasMarshaler(typ *shared.Type, isArgument bool) bool {
 	}
 
 	// Для алиасов проверяем базовый тип (но не рекурсивно по его содержимому)
-	if typ.Kind == shared.TypeKindAlias && typ.AliasOf != "" {
+	if typ.Kind == core.TypeKindAlias && typ.AliasOf != "" {
 		if baseType, exists := r.project.Types[typ.AliasOf]; exists {
 			return r.hasMarshaler(baseType, isArgument)
 		}
@@ -46,15 +46,15 @@ func (r *ClientRenderer) hasMarshaler(typ *shared.Type, isArgument bool) bool {
 
 // walkVariable конвертирует Go тип в TypeScript определение типа
 // isArgument указывает, является ли это аргументом метода (true) или возвращаемым значением (false)
-func (r *ClientRenderer) walkVariable(typeName, pkgPath string, variable *shared.Variable, varTags map[string]string, isArgument bool) (schema typeDefTs) {
-	logger := shared.GetLogger()
+func (r *ClientRenderer) walkVariable(typeName, pkgPath string, variable *core.Variable, varTags map[string]string, isArgument bool) (schema typeDefTs) {
+	logger := core.GetLogger()
 	logger.Debug(fmt.Sprintf("walkVariable: typeName=%s, pkgPath=%s, variable.TypeID=%s", typeName, pkgPath, variable.TypeID))
 	return r.walkVariableWithVisited(typeName, pkgPath, variable, varTags, make(map[string]bool), isArgument)
 }
 
 // walkVariableWithVisited конвертирует Go тип в TypeScript определение типа с отслеживанием обрабатываемых типов
 // isArgument указывает, является ли это аргументом метода (true) или возвращаемым значением (false)
-func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, variable *shared.Variable, varTags map[string]string, processing map[string]bool, isArgument bool) (schema typeDefTs) {
+func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, variable *core.Variable, varTags map[string]string, processing map[string]bool, isArgument bool) (schema typeDefTs) {
 
 	schema.name = typeName
 	schema.properties = make(map[string]typeDefTs)
@@ -69,7 +69,7 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 		schema.typeName = "array"
 		schema.nullable = true
 		if variable.TypeID != "" {
-			itemVar := &shared.Variable{
+			itemVar := &core.Variable{
 				Name:   "item",
 				TypeID: variable.TypeID,
 			}
@@ -84,7 +84,7 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 		// Проверяем, является ли TypeID именованным map типом из текущего проекта
 		if variable.TypeID != "" {
 			if typ, ok := r.project.Types[variable.TypeID]; ok {
-				if typ.Kind == shared.TypeKindMap && typ.TypeName != "" && typ.ImportPkgPath != "" {
+				if typ.Kind == core.TypeKindMap && typ.TypeName != "" && typ.ImportPkgPath != "" {
 					if r.isTypeFromCurrentProject(typ.ImportPkgPath) {
 						// Это именованный map тип из текущего проекта - используем ссылку на тип
 						schema.kind = "scalar"
@@ -110,8 +110,8 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 									importPkg:  schema.importPkg,
 									importName: schema.importName,
 									properties: map[string]typeDefTs{
-										"key": r.walkVariableWithVisited("key", pkgPath, &shared.Variable{TypeID: typ.MapKeyID}, nil, processing, isArgument),
-										"value": r.walkVariableWithVisited("value", pkgPath, &shared.Variable{TypeID: typ.MapValueID}, nil, processing, isArgument),
+										"key":   r.walkVariableWithVisited("key", pkgPath, &core.Variable{TypeID: typ.MapKeyID}, nil, processing, isArgument),
+										"value": r.walkVariableWithVisited("value", pkgPath, &core.Variable{TypeID: typ.MapValueID}, nil, processing, isArgument),
 									},
 								}
 								r.typeDefTs[typeKey] = mapDef
@@ -126,8 +126,8 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 		schema.kind = "map"
 		schema.typeName = "map"
 		schema.nullable = true
-		keyVar := &shared.Variable{TypeID: variable.MapKeyID}
-		valueVar := &shared.Variable{TypeID: variable.MapValueID}
+		keyVar := &core.Variable{TypeID: variable.MapKeyID}
+		valueVar := &core.Variable{TypeID: variable.MapValueID}
 		schema.properties["key"] = r.walkVariableWithVisited("key", pkgPath, keyVar, nil, processing, isArgument)
 		schema.properties["value"] = r.walkVariableWithVisited("value", pkgPath, valueVar, nil, processing, isArgument)
 		return
@@ -138,7 +138,7 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 	typ, ok := r.project.Types[typeID]
 	// ВАЖНО: если TypeID указывает на именованный map тип из текущего проекта,
 	// используем ссылку на тип, даже если MapKeyID и MapValueID пустые
-	if ok && typ.Kind == shared.TypeKindMap && typ.TypeName != "" && typ.ImportPkgPath != "" {
+	if ok && typ.Kind == core.TypeKindMap && typ.TypeName != "" && typ.ImportPkgPath != "" {
 		if r.isTypeFromCurrentProject(typ.ImportPkgPath) {
 			// Это именованный map тип из текущего проекта - используем ссылку на тип
 			schema.kind = "scalar"
@@ -172,8 +172,8 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 						importPkg:  schema.importPkg,
 						importName: schema.importName,
 						properties: map[string]typeDefTs{
-							"key": r.walkVariableWithVisited("key", pkgPath, &shared.Variable{TypeID: mapKeyID}, nil, processing, isArgument),
-							"value": r.walkVariableWithVisited("value", pkgPath, &shared.Variable{TypeID: mapValueID}, nil, processing, isArgument),
+							"key":   r.walkVariableWithVisited("key", pkgPath, &core.Variable{TypeID: mapKeyID}, nil, processing, isArgument),
+							"value": r.walkVariableWithVisited("value", pkgPath, &core.Variable{TypeID: mapValueID}, nil, processing, isArgument),
 						},
 					}
 					r.typeDefTs[typeKey] = mapDef
@@ -209,7 +209,7 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 	// Проверяем только сам тип, без рекурсии по вложенным типам
 	hasCustomMarshaler := r.hasMarshaler(typ, isArgument)
 	isExcluded := r.isExplicitlyExcludedType(typ)
-	
+
 	// Если тип имеет кастомный маршалер и НЕ является явным исключением,
 	// используем any, так как мы не знаем формат сериализации
 	// ВАЖНО: не обрабатываем содержимое типа (поля, элементы и т.д.), просто возвращаем any
@@ -235,7 +235,7 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 		}
 		return
 	}
-	
+
 	if isExcluded {
 		// Проверяем time.Time по ImportPkgPath и TypeName
 		if typ.ImportPkgPath == "time" && typ.TypeName == "Time" {
@@ -268,9 +268,9 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 
 	// Обрабатываем базовый тип
 	switch typ.Kind {
-	case shared.TypeKindString, shared.TypeKindInt, shared.TypeKindInt8, shared.TypeKindInt16, shared.TypeKindInt32, shared.TypeKindInt64,
-		shared.TypeKindUint, shared.TypeKindUint8, shared.TypeKindUint16, shared.TypeKindUint32, shared.TypeKindUint64,
-		shared.TypeKindFloat32, shared.TypeKindFloat64, shared.TypeKindBool, shared.TypeKindByte, shared.TypeKindRune:
+	case core.TypeKindString, core.TypeKindInt, core.TypeKindInt8, core.TypeKindInt16, core.TypeKindInt32, core.TypeKindInt64,
+		core.TypeKindUint, core.TypeKindUint8, core.TypeKindUint16, core.TypeKindUint32, core.TypeKindUint64,
+		core.TypeKindFloat32, core.TypeKindFloat64, core.TypeKindBool, core.TypeKindByte, core.TypeKindRune:
 		// Проверяем, не является ли это time.Time с Kind=string (алиас на string)
 		if typ.ImportPkgPath == "time" && typ.TypeName == "Time" {
 			schema.kind = "scalar"
@@ -281,15 +281,15 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 		// Определяем базовый TypeScript тип на основе Kind типа
 		var baseTSType string
 		switch typ.Kind {
-		case shared.TypeKindString:
+		case core.TypeKindString:
 			baseTSType = "string"
-		case shared.TypeKindInt, shared.TypeKindInt8, shared.TypeKindInt16, shared.TypeKindInt32, shared.TypeKindInt64,
-			shared.TypeKindUint, shared.TypeKindUint8, shared.TypeKindUint16, shared.TypeKindUint32, shared.TypeKindUint64,
-			shared.TypeKindByte, shared.TypeKindRune:
+		case core.TypeKindInt, core.TypeKindInt8, core.TypeKindInt16, core.TypeKindInt32, core.TypeKindInt64,
+			core.TypeKindUint, core.TypeKindUint8, core.TypeKindUint16, core.TypeKindUint32, core.TypeKindUint64,
+			core.TypeKindByte, core.TypeKindRune:
 			baseTSType = "number"
-		case shared.TypeKindFloat32, shared.TypeKindFloat64:
+		case core.TypeKindFloat32, core.TypeKindFloat64:
 			baseTSType = "number"
-		case shared.TypeKindBool:
+		case core.TypeKindBool:
 			baseTSType = "boolean"
 		default:
 			// Fallback: используем castTypeTs
@@ -320,7 +320,7 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 		}
 		return
 
-	case shared.TypeKindStruct:
+	case core.TypeKindStruct:
 		// Проверка на исключаемые типы уже выполнена выше, здесь обрабатываем только обычные структуры
 		// Используем TypeName, если есть, иначе typeName из параметра
 		if typ.TypeName != "" {
@@ -330,34 +330,34 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 		}
 		schema.kind = "struct"
 		schema.typeName = "struct"
-		
+
 		// Защита от циклических зависимостей: проверяем, не обрабатывается ли уже этот тип
 		if processing[typeID] {
 			// Циклическая зависимость обнаружена - возвращаем ссылку на тип без полей
 			schema.properties = make(map[string]typeDefTs)
 			return
 		}
-		
+
 		// Помечаем тип как обрабатываемый
 		processing[typeID] = true
 		defer delete(processing, typeID)
-		
+
 		// Обрабатываем поля структуры только если они есть
 		if len(typ.StructFields) > 0 {
 			for _, field := range typ.StructFields {
 				fieldName, inline := r.jsonName(field)
 				if fieldName != "-" {
-				fieldVar := &shared.Variable{
-					Name:            field.Name,
-					TypeID:          field.TypeID,
-					NumberOfPointers: field.NumberOfPointers,
-					IsSlice:          field.IsSlice,
-					ArrayLen:          field.ArrayLen,
-					MapKeyID:          field.MapKeyID,
-					MapValueID:        field.MapValueID,
-				}
-				fieldTags := parseTagsFromDocs(field.Docs)
-				embed := r.walkVariableWithVisited(field.Name, typ.ImportPkgPath, fieldVar, fieldTags, processing, isArgument)
+					fieldVar := &core.Variable{
+						Name:             field.Name,
+						TypeID:           field.TypeID,
+						NumberOfPointers: field.NumberOfPointers,
+						IsSlice:          field.IsSlice,
+						ArrayLen:         field.ArrayLen,
+						MapKeyID:         field.MapKeyID,
+						MapValueID:       field.MapValueID,
+					}
+					fieldTags := parseTagsFromDocs(field.Docs)
+					embed := r.walkVariableWithVisited(field.Name, typ.ImportPkgPath, fieldVar, fieldTags, processing, isArgument)
 					if !inline {
 						schema.properties[fieldName] = embed
 						continue
@@ -412,7 +412,7 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 		// Возвращаем схему для использования в typeLink()
 		return
 
-	case shared.TypeKindAlias:
+	case core.TypeKindAlias:
 		// Для алиасов создаем type alias, который ссылается на базовый тип
 		// ВАЖНО: не разворачиваем базовый тип, а сохраняем алиас как ссылку
 		if typ.AliasOf != "" {
@@ -420,14 +420,14 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 			baseType, baseTypeExists := r.project.Types[typ.AliasOf]
 			if !baseTypeExists {
 				// Базовый тип не найден - обрабатываем как обычно
-				aliasVar := &shared.Variable{TypeID: typ.AliasOf}
+				aliasVar := &core.Variable{TypeID: typ.AliasOf}
 				return r.walkVariableWithVisited(typeName, pkgPath, aliasVar, varTags, processing, isArgument)
 			}
-			
+
 			// Получаем схему базового типа для формирования ссылки
-			baseVar := &shared.Variable{TypeID: typ.AliasOf}
+			baseVar := &core.Variable{TypeID: typ.AliasOf}
 			baseSchema := r.walkVariableWithVisited("base", pkgPath, baseVar, nil, processing, isArgument)
-			
+
 			// Формируем ссылку на базовый тип
 			var baseTypeRef string
 			switch {
@@ -448,12 +448,12 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 				// Базовый тип из того же пакета или встроенный
 				baseTypeRef = baseSchema.typeLink()
 			}
-			
+
 			// Создаем схему алиаса
 			schema.kind = "scalar"
 			schema.typeName = baseTypeRef
 			schema.name = typ.TypeName
-			
+
 			// Сохраняем информацию об импорте алиаса
 			if typ.ImportPkgPath != "" {
 				if typ.PkgName != "" {
@@ -463,26 +463,26 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 				}
 				schema.importName = typ.TypeName
 			}
-			
+
 			// Сохраняем алиас в typeDefTs
 			if schema.importPkg != "" && schema.importName != "" {
 				typeKey := fmt.Sprintf("%s:%s", schema.importPkg, schema.importName)
 				r.typeDefTs[typeKey] = schema
 			}
-			
+
 			return schema
 		}
 
-	case shared.TypeKindArray:
+	case core.TypeKindArray:
 		schema.kind = "array"
 		schema.typeName = "array"
 		schema.nullable = true
 		if typ.ArrayOfID != "" {
-			itemVar := &shared.Variable{TypeID: typ.ArrayOfID}
+			itemVar := &core.Variable{TypeID: typ.ArrayOfID}
 			schema.properties["item"] = r.walkVariableWithVisited("item", pkgPath, itemVar, nil, processing, isArgument)
 		}
 
-	case shared.TypeKindMap:
+	case core.TypeKindMap:
 		// ВАЖНО: если это именованный map тип из текущего проекта, используем имя типа
 		if typ.TypeName != "" && typ.ImportPkgPath != "" {
 			// Проверяем, является ли тип из текущего проекта
@@ -494,14 +494,14 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 				schema.nullable = true
 				// Генерируем типы ключа и значения
 				if typ.MapKeyID != "" && typ.MapValueID != "" {
-					keyVar := &shared.Variable{TypeID: typ.MapKeyID}
-					valueVar := &shared.Variable{TypeID: typ.MapValueID}
+					keyVar := &core.Variable{TypeID: typ.MapKeyID}
+					valueVar := &core.Variable{TypeID: typ.MapValueID}
 					schema.properties["key"] = r.walkVariableWithVisited("key", pkgPath, keyVar, nil, processing, isArgument)
 					schema.properties["value"] = r.walkVariableWithVisited("value", pkgPath, valueVar, nil, processing, isArgument)
 				} else {
 					// Если MapKeyID или MapValueID пустые, используем string для ключа и any для значения
-					keyVar := &shared.Variable{TypeID: "string"}
-					valueVar := &shared.Variable{TypeID: "any"}
+					keyVar := &core.Variable{TypeID: "string"}
+					valueVar := &core.Variable{TypeID: "any"}
 					schema.properties["key"] = r.walkVariableWithVisited("key", pkgPath, keyVar, nil, processing, isArgument)
 					schema.properties["value"] = r.walkVariableWithVisited("value", pkgPath, valueVar, nil, processing, isArgument)
 				}
@@ -527,19 +527,19 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 		schema.typeName = "map"
 		schema.nullable = true
 		if typ.MapKeyID != "" && typ.MapValueID != "" {
-			keyVar := &shared.Variable{TypeID: typ.MapKeyID}
-			valueVar := &shared.Variable{TypeID: typ.MapValueID}
+			keyVar := &core.Variable{TypeID: typ.MapKeyID}
+			valueVar := &core.Variable{TypeID: typ.MapValueID}
 			schema.properties["key"] = r.walkVariableWithVisited("key", pkgPath, keyVar, nil, processing, isArgument)
 			schema.properties["value"] = r.walkVariableWithVisited("value", pkgPath, valueVar, nil, processing, isArgument)
 		} else {
 			// Если MapKeyID или MapValueID пустые, используем string для ключа и any для значения
-			keyVar := &shared.Variable{TypeID: "string"}
-			valueVar := &shared.Variable{TypeID: "any"}
+			keyVar := &core.Variable{TypeID: "string"}
+			valueVar := &core.Variable{TypeID: "any"}
 			schema.properties["key"] = r.walkVariableWithVisited("key", pkgPath, keyVar, nil, processing, isArgument)
 			schema.properties["value"] = r.walkVariableWithVisited("value", pkgPath, valueVar, nil, processing, isArgument)
 		}
 
-	case shared.TypeKindInterface, shared.TypeKindAny:
+	case core.TypeKindInterface, core.TypeKindAny:
 		schema.kind = "scalar"
 		schema.name = "interface"
 		schema.typeName = "any"
@@ -558,7 +558,7 @@ func (r *ClientRenderer) walkVariableWithVisited(typeName, pkgPath string, varia
 }
 
 // jsonName извлекает имя JSON поля из структуры
-func (r *ClientRenderer) jsonName(field *shared.StructField) (value string, inline bool) {
+func (r *ClientRenderer) jsonName(field *core.StructField) (value string, inline bool) {
 	if field.Name == "" {
 		return field.Name, false
 	}

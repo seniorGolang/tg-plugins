@@ -6,8 +6,8 @@ import (
 	"path"
 	"strings"
 
+	"tgp/core"
 	"tgp/plugins/client-ts/tsg"
-	"tgp/shared"
 )
 
 // RenderClient генерирует базовый Client класс
@@ -180,7 +180,7 @@ func (r *ClientRenderer) renderNewClientFunction() *tsg.Statement {
 }
 
 // renderContractClientMethod генерирует метод на базовом Client для получения клиента контракта
-func (r *ClientRenderer) renderContractClientMethod(contract *shared.Contract) *tsg.Statement {
+func (r *ClientRenderer) renderContractClientMethod(contract *core.Contract) *tsg.Statement {
 	stmt := tsg.NewStatement()
 	// Используем tsFileName для консистентности с именами файлов (snake_case -> lowerCamelCase)
 	fileName := r.tsFileName(contract)

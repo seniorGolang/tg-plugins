@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // Для TS клиента jsonrpc библиотека генерируется через шаблоны, а не копируется
@@ -15,16 +15,16 @@ import (
 
 // ClientRenderer содержит общую функциональность для генерации клиента.
 type ClientRenderer struct {
-	project     *shared.Project
+	project     *core.Project
 	outDir      string
 	projectRoot string
-	contract    *shared.Contract
+	contract    *core.Contract
 	knownTypes  map[string]int
 	typeDefTs   map[string]typeDefTs
 }
 
 // NewClientRenderer создает новый рендерер клиента.
-func NewClientRenderer(project *shared.Project, outDir, projectRoot string) *ClientRenderer {
+func NewClientRenderer(project *core.Project, outDir, projectRoot string) *ClientRenderer {
 	return &ClientRenderer{
 		project:     project,
 		outDir:      outDir,
@@ -33,7 +33,6 @@ func NewClientRenderer(project *shared.Project, outDir, projectRoot string) *Cli
 		typeDefTs:   make(map[string]typeDefTs),
 	}
 }
-
 
 // HasJsonRPC проверяет, есть ли контракты с JSON-RPC.
 func (r *ClientRenderer) HasJsonRPC() bool {
@@ -57,7 +56,6 @@ func (r *ClientRenderer) HasHTTP() bool {
 	return false
 }
 
-
 // contains проверяет, содержится ли ключ в map.
 func (r *ClientRenderer) contains(m map[string]string, key string) bool {
 	if m == nil {
@@ -77,7 +75,7 @@ func (r *ClientRenderer) isTypeFromCurrentProject(importPkgPath string) bool {
 }
 
 // tsFileName возвращает имя файла для TypeScript (в snake_case).
-func (r *ClientRenderer) tsFileName(contract *shared.Contract) string {
+func (r *ClientRenderer) tsFileName(contract *core.Contract) string {
 	name := contract.Name
 	if len(name) == 0 {
 		return ""
@@ -115,12 +113,12 @@ func (r *ClientRenderer) lcName(s string) string {
 }
 
 // requestTypeName возвращает имя типа request для метода.
-func (r *ClientRenderer) requestTypeName(contract *shared.Contract, method *shared.Method) string {
+func (r *ClientRenderer) requestTypeName(contract *core.Contract, method *core.Method) string {
 	return fmt.Sprintf("Request%s%s", contract.Name, method.Name)
 }
 
 // responseTypeName возвращает имя типа response для метода.
-func (r *ClientRenderer) responseTypeName(contract *shared.Contract, method *shared.Method) string {
+func (r *ClientRenderer) responseTypeName(contract *core.Contract, method *core.Method) string {
 	return fmt.Sprintf("Response%s%s", contract.Name, method.Name)
 }
 
@@ -170,5 +168,4 @@ func toLowerCamel(s string) string {
 // - RenderJsonRPCClientClass - jsonrpc-client.go
 // - RenderHTTPClientClass - http-client.go
 // - RenderReadmeTS - readme.go
-	// - RenderTsConfig - tsconfig.go
-
+// - RenderTsConfig - tsconfig.go

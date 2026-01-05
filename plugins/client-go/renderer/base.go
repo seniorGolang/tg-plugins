@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 //go:embed pkg/jsonrpc
@@ -19,13 +19,13 @@ var pkgFiles embed.FS
 
 // ClientRenderer содержит общую функциональность для генерации клиента.
 type ClientRenderer struct {
-	project     *shared.Project
+	project     *core.Project
 	outDir      string
 	projectRoot string
 }
 
 // NewClientRenderer создает новый рендерер клиента.
-func NewClientRenderer(project *shared.Project, outDir, projectRoot string) *ClientRenderer {
+func NewClientRenderer(project *core.Project, outDir, projectRoot string) *ClientRenderer {
 	return &ClientRenderer{
 		project:     project,
 		outDir:      outDir,
@@ -131,4 +131,3 @@ func (r *ClientRenderer) contains(m map[string]string, key string) bool {
 // - RenderServiceClient - service.go
 // - RenderClientMetrics - metrics.go
 // - RenderReadmeGo - readme.go
-

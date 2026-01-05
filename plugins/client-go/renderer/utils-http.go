@@ -8,11 +8,11 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // varHeaderMap возвращает маппинг переменных на HTTP заголовки.
-func (r *ClientRenderer) varHeaderMap(method *shared.Method) map[string]string {
+func (r *ClientRenderer) varHeaderMap(method *core.Method) map[string]string {
 	headers := make(map[string]string)
 	if httpHeaders, ok := method.Annotations[TagHttpHeader]; ok && httpHeaders != "" {
 		headerPairs := strings.Split(httpHeaders, ",")
@@ -28,7 +28,7 @@ func (r *ClientRenderer) varHeaderMap(method *shared.Method) map[string]string {
 }
 
 // varCookieMap возвращает маппинг переменных на HTTP cookies.
-func (r *ClientRenderer) varCookieMap(method *shared.Method) map[string]string {
+func (r *ClientRenderer) varCookieMap(method *core.Method) map[string]string {
 	cookies := make(map[string]string)
 	if httpCookies, ok := method.Annotations[TagHttpCookies]; ok && httpCookies != "" {
 		cookiePairs := strings.Split(httpCookies, ",")
@@ -44,7 +44,7 @@ func (r *ClientRenderer) varCookieMap(method *shared.Method) map[string]string {
 }
 
 // argPathMap возвращает маппинг аргументов на path параметры.
-func (r *ClientRenderer) argPathMap(method *shared.Method) map[string]string {
+func (r *ClientRenderer) argPathMap(method *core.Method) map[string]string {
 	paths := make(map[string]string)
 	if urlPath, ok := method.Annotations[TagHttpPath]; ok && urlPath != "" {
 		urlTokens := strings.Split(urlPath, "/")
@@ -59,7 +59,7 @@ func (r *ClientRenderer) argPathMap(method *shared.Method) map[string]string {
 }
 
 // argParamMap возвращает маппинг аргументов на query параметры.
-func (r *ClientRenderer) argParamMap(method *shared.Method) map[string]string {
+func (r *ClientRenderer) argParamMap(method *core.Method) map[string]string {
 	params := make(map[string]string)
 	if urlArgs, ok := method.Annotations[TagHttpArg]; ok && urlArgs != "" {
 		paramPairs := strings.Split(urlArgs, ",")
@@ -75,7 +75,7 @@ func (r *ClientRenderer) argParamMap(method *shared.Method) map[string]string {
 }
 
 // argByName находит аргумент по имени.
-func (r *ClientRenderer) argByName(method *shared.Method, argName string) *shared.Variable {
+func (r *ClientRenderer) argByName(method *core.Method, argName string) *core.Variable {
 	argName = strings.TrimPrefix(argName, "!")
 	for _, arg := range method.Args {
 		if arg.Name == argName {
@@ -86,7 +86,7 @@ func (r *ClientRenderer) argByName(method *shared.Method, argName string) *share
 }
 
 // varToString генерирует код для конвертации переменной в строку.
-func (r *ClientRenderer) varToString(ctx context.Context, variable *shared.Variable) Code {
+func (r *ClientRenderer) varToString(ctx context.Context, variable *core.Variable) Code {
 	// Проверяем, является ли тип строкой
 	if variable.TypeID == "string" {
 		return Id(ToLowerCamel(variable.Name))
@@ -96,7 +96,7 @@ func (r *ClientRenderer) varToString(ctx context.Context, variable *shared.Varia
 }
 
 // contractNameToLowerCamel возвращает имя контракта в lowerCamelCase.
-func (r *ClientRenderer) contractNameToLowerCamel(contract *shared.Contract) string {
+func (r *ClientRenderer) contractNameToLowerCamel(contract *core.Contract) string {
 	if contract == nil {
 		return ""
 	}
@@ -104,7 +104,7 @@ func (r *ClientRenderer) contractNameToLowerCamel(contract *shared.Contract) str
 }
 
 // methodNameToLowerCamel возвращает имя метода в lowerCamelCase.
-func (r *ClientRenderer) methodNameToLowerCamel(method *shared.Method) string {
+func (r *ClientRenderer) methodNameToLowerCamel(method *core.Method) string {
 	if method == nil {
 		return ""
 	}
@@ -112,7 +112,7 @@ func (r *ClientRenderer) methodNameToLowerCamel(method *shared.Method) string {
 }
 
 // contractNameToLower возвращает имя контракта в lowercase (для JSON-RPC).
-func (r *ClientRenderer) contractNameToLower(contract *shared.Contract) string {
+func (r *ClientRenderer) contractNameToLower(contract *core.Contract) string {
 	if contract == nil {
 		return ""
 	}
@@ -120,10 +120,9 @@ func (r *ClientRenderer) contractNameToLower(contract *shared.Contract) string {
 }
 
 // methodNameToLower возвращает имя метода в lowercase (для JSON-RPC).
-func (r *ClientRenderer) methodNameToLower(method *shared.Method) string {
+func (r *ClientRenderer) methodNameToLower(method *core.Method) string {
 	if method == nil {
 		return ""
 	}
 	return strings.ToLower(method.Name)
 }
-

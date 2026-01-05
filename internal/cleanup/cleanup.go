@@ -9,14 +9,14 @@ import (
 	"path"
 	"strings"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // CleanupGeneratedFiles удаляет все сгенерированные файлы из указанной директории.
 // Удаляются .go и .ts файлы, помеченные комментарием doNotEdit.
 // Также удаляет подкаталоги (например, jsonrpc), если они содержат только сгенерированные файлы.
 func CleanupGeneratedFiles(outDir string) error {
-	logger := shared.GetLogger()
+	logger := core.GetLogger()
 
 	var err error
 	var files []os.DirEntry

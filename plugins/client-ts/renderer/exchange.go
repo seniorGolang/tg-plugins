@@ -9,12 +9,12 @@ import (
 	"path"
 	"strings"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // renderExchangeTS генерирует exchange типы для TypeScript (request/response для каждого метода)
 // RenderExchangeTypes генерирует exchange типы (request/response) для контракта
-func (r *ClientRenderer) RenderExchangeTypes(contract *shared.Contract) (err error) {
+func (r *ClientRenderer) RenderExchangeTypes(contract *core.Contract) (err error) {
 	outDir := r.outDir
 	r.contract = contract
 	// Инициализируем карты для типов
@@ -150,7 +150,7 @@ func (r *ClientRenderer) RenderExchangeTypes(contract *shared.Contract) (err err
 }
 
 // renderExchangeRequestType генерирует тип request для метода
-func (r *ClientRenderer) renderExchangeRequestType(contract *shared.Contract, method *shared.Method) *tsg.Statement {
+func (r *ClientRenderer) renderExchangeRequestType(contract *core.Contract, method *core.Method) *tsg.Statement {
 	requestName := r.requestTypeName(contract, method)
 
 	stmt := tsg.NewStatement()
@@ -193,7 +193,7 @@ func (r *ClientRenderer) renderExchangeRequestType(contract *shared.Contract, me
 }
 
 // renderExchangeResponseType генерирует тип response для метода
-func (r *ClientRenderer) renderExchangeResponseType(contract *shared.Contract, method *shared.Method) *tsg.Statement {
+func (r *ClientRenderer) renderExchangeResponseType(contract *core.Contract, method *core.Method) *tsg.Statement {
 	responseName := r.responseTypeName(contract, method)
 
 	stmt := tsg.NewStatement()
@@ -258,8 +258,8 @@ func (r *ClientRenderer) filterDocsComments(docs []string) []string {
 }
 
 // argsWithoutContext возвращает аргументы метода без context.Context
-func (r *ClientRenderer) argsWithoutContext(method *shared.Method) []*shared.Variable {
-	args := make([]*shared.Variable, 0, len(method.Args))
+func (r *ClientRenderer) argsWithoutContext(method *core.Method) []*core.Variable {
+	args := make([]*core.Variable, 0, len(method.Args))
 	for _, arg := range method.Args {
 		// Пропускаем context.Context
 		if arg.TypeID == "context:Context" || arg.TypeID == "context.Context" {
@@ -271,8 +271,8 @@ func (r *ClientRenderer) argsWithoutContext(method *shared.Method) []*shared.Var
 }
 
 // resultsWithoutError возвращает результаты метода без error
-func (r *ClientRenderer) resultsWithoutError(method *shared.Method) []*shared.Variable {
-	results := make([]*shared.Variable, 0, len(method.Results))
+func (r *ClientRenderer) resultsWithoutError(method *core.Method) []*core.Variable {
+	results := make([]*core.Variable, 0, len(method.Results))
 	for _, result := range method.Results {
 		// Пропускаем error
 		if result.TypeID == "error" || result.TypeID == "builtin:error" {

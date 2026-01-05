@@ -14,7 +14,7 @@ import (
 
 	"tgp/internal/markdown"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 //go:embed templates/*.tmpl
@@ -43,7 +43,7 @@ func (r *ClientRenderer) RenderReadmeTS(docOpts DocOptions) error {
 	md.PlainText("Автоматически сгенерированная документация API для TypeScript клиента.")
 
 	// Сортируем контракты по имени для консистентности
-	contracts := make([]*shared.Contract, len(r.project.Contracts))
+	contracts := make([]*core.Contract, len(r.project.Contracts))
 	copy(contracts, r.project.Contracts)
 	sort.Slice(contracts, func(i, j int) bool {
 		return contracts[i].Name < contracts[j].Name
@@ -121,7 +121,7 @@ func (r *ClientRenderer) RenderReadmeTS(docOpts DocOptions) error {
 		md.LF()
 		md.PlainText(fmt.Sprintf("- [Общие типы](#%s)", generateAnchor("Общие типы")))
 		md.LF()
-		
+
 		// Группируем типы по namespace для оглавления
 		typesByNamespaceTOC := make(map[string][]*typeUsageTS)
 		for _, usage := range allTypes {
@@ -135,33 +135,33 @@ func (r *ClientRenderer) RenderReadmeTS(docOpts DocOptions) error {
 			}
 			typesByNamespaceTOC[namespace] = append(typesByNamespaceTOC[namespace], usage)
 		}
-		
+
 		// Сортируем namespace для оглавления
 		namespaceKeysTOC := make([]string, 0, len(typesByNamespaceTOC))
 		for ns := range typesByNamespaceTOC {
 			namespaceKeysTOC = append(namespaceKeysTOC, ns)
 		}
 		sort.Strings(namespaceKeysTOC)
-		
+
 		// Добавляем ссылки на типы, сгруппированные по namespace
 		for _, namespace := range namespaceKeysTOC {
 			types := typesByNamespaceTOC[namespace]
 			sort.Slice(types, func(i, j int) bool {
 				return types[i].fullTypeName < types[j].fullTypeName
 			})
-			
+
 			// Если есть namespace, добавляем подзаголовок
 			if namespace != "" {
 				namespaceAnchor := generateAnchor(namespace)
 				md.PlainText(fmt.Sprintf("  - [%s](#%s)", namespace, namespaceAnchor))
 				md.LF()
 			}
-			
+
 			// Добавляем ссылки на конкретные типы
 			for _, usage := range types {
 				// Пропускаем исключаемые типы и типы с маршалерами
 				// Ищем тип для проверки
-				var typ *shared.Type
+				var typ *core.Type
 				for _, t := range r.project.Types {
 					if t.TypeName == usage.typeName {
 						tPkg := t.ImportPkgPath
@@ -268,7 +268,7 @@ func generateAnchor(title string) string {
 }
 
 // methodIsJsonRPC проверяет, является ли метод JSON-RPC методом.
-func (r *ClientRenderer) methodIsJsonRPC(contract *shared.Contract, method *shared.Method) bool {
+func (r *ClientRenderer) methodIsJsonRPC(contract *core.Contract, method *core.Method) bool {
 	if method == nil || method.Annotations == nil {
 		return false
 	}
@@ -277,7 +277,7 @@ func (r *ClientRenderer) methodIsJsonRPC(contract *shared.Contract, method *shar
 }
 
 // methodIsHTTP проверяет, является ли метод HTTP методом.
-func (r *ClientRenderer) methodIsHTTP(method *shared.Method) bool {
+func (r *ClientRenderer) methodIsHTTP(method *core.Method) bool {
 	if method == nil || method.Annotations == nil {
 		return false
 	}
@@ -318,8 +318,8 @@ func (r *ClientRenderer) renderClientDescriptionTS(md *markdown.Markdown) {
 	md.LF()
 
 	// Находим первый доступный контракт и метод для примеров
-	var exampleContract *shared.Contract
-	var exampleMethod *shared.Method
+	var exampleContract *core.Contract
+	var exampleMethod *core.Method
 
 	for _, contract := range r.project.Contracts {
 		if r.contains(contract.Annotations, TagServerJsonRPC) {
@@ -392,9 +392,9 @@ func (r *ClientRenderer) renderClientDescriptionTS(md *markdown.Markdown) {
 		clientMethodName := r.getClientMethodName(exampleContract)
 
 		templateData := map[string]interface{}{
-			"ServiceVar":      serviceVar,
+			"ServiceVar":       serviceVar,
 			"ClientMethodName": clientMethodName,
-			"MethodCall":      methodCall,
+			"MethodCall":       methodCall,
 		}
 
 		var codeExample string
@@ -455,9 +455,9 @@ func (r *ClientRenderer) renderClientDescriptionTS(md *markdown.Markdown) {
 		clientMethodName := r.getClientMethodName(exampleContract)
 
 		templateData := map[string]interface{}{
-			"ServiceVar":      serviceVar,
+			"ServiceVar":       serviceVar,
 			"ClientMethodName": clientMethodName,
-			"MethodCall":      methodCall,
+			"MethodCall":       methodCall,
 		}
 
 		var codeExample string
@@ -519,10 +519,10 @@ func (r *ClientRenderer) renderClientDescriptionTS(md *markdown.Markdown) {
 		clientMethodName := r.getClientMethodName(exampleContract)
 
 		templateData := map[string]interface{}{
-			"ServiceVar":      serviceVar,
+			"ServiceVar":       serviceVar,
 			"ClientMethodName": clientMethodName,
-			"MethodName":      exampleMethod.Name,
-			"MethodCall":      methodCall,
+			"MethodName":       exampleMethod.Name,
+			"MethodCall":       methodCall,
 		}
 
 		var codeExample string
@@ -586,10 +586,10 @@ func (r *ClientRenderer) renderClientDescriptionTS(md *markdown.Markdown) {
 		clientMethodName := r.getClientMethodName(exampleContract)
 
 		templateData := map[string]interface{}{
-			"ServiceVar":      serviceVar,
+			"ServiceVar":       serviceVar,
 			"ClientMethodName": clientMethodName,
-			"MethodName":      exampleMethod.Name,
-			"MethodCall":      methodCall,
+			"MethodName":       exampleMethod.Name,
+			"MethodCall":       methodCall,
 		}
 
 		var codeExample string
@@ -612,7 +612,7 @@ func (r *ClientRenderer) renderClientDescriptionTS(md *markdown.Markdown) {
 }
 
 // renderContractTS генерирует документацию для контракта
-func (r *ClientRenderer) renderContractTS(md *markdown.Markdown, contract *shared.Contract, outDir string) {
+func (r *ClientRenderer) renderContractTS(md *markdown.Markdown, contract *core.Contract, outDir string) {
 	contractAnchor := generateAnchor(contract.Name)
 	md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", contractAnchor))
 	md.LF()
@@ -649,7 +649,7 @@ func (r *ClientRenderer) renderContractTS(md *markdown.Markdown, contract *share
 }
 
 // renderMethodDocTS генерирует документацию для JSON-RPC метода
-func (r *ClientRenderer) renderMethodDocTS(md *markdown.Markdown, method *shared.Method, contract *shared.Contract, outDir string) {
+func (r *ClientRenderer) renderMethodDocTS(md *markdown.Markdown, method *core.Method, contract *core.Contract, outDir string) {
 	methodAnchor := generateAnchor(method.Name)
 	md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", methodAnchor))
 	md.LF()
@@ -691,7 +691,7 @@ func (r *ClientRenderer) renderMethodDocTS(md *markdown.Markdown, method *shared
 }
 
 // renderHTTPMethodDocTS генерирует документацию для HTTP метода
-func (r *ClientRenderer) renderHTTPMethodDocTS(md *markdown.Markdown, method *shared.Method, contract *shared.Contract, outDir string) {
+func (r *ClientRenderer) renderHTTPMethodDocTS(md *markdown.Markdown, method *core.Method, contract *core.Contract, outDir string) {
 	httpMethod := method.Annotations[TagMethodHTTP]
 	if httpMethod == "" {
 		httpMethod = "GET"
@@ -740,7 +740,7 @@ func (r *ClientRenderer) renderHTTPMethodDocTS(md *markdown.Markdown, method *sh
 }
 
 // renderMethodSignatureTS генерирует сигнатуру метода в блоке кода
-func (r *ClientRenderer) renderMethodSignatureTS(md *markdown.Markdown, method *shared.Method, contract *shared.Contract, isHTTP bool) {
+func (r *ClientRenderer) renderMethodSignatureTS(md *markdown.Markdown, method *core.Method, contract *core.Contract, isHTTP bool) {
 	md.PlainText(markdown.Bold("Сигнатура:"))
 	md.LF()
 
@@ -814,7 +814,7 @@ func (r *ClientRenderer) renderMethodSignatureTS(md *markdown.Markdown, method *
 }
 
 // renderMethodParamsAndResultsTS генерирует таблицы параметров и возвращаемых значений
-func (r *ClientRenderer) renderMethodParamsAndResultsTS(md *markdown.Markdown, method *shared.Method, contract *shared.Contract) {
+func (r *ClientRenderer) renderMethodParamsAndResultsTS(md *markdown.Markdown, method *core.Method, contract *core.Contract) {
 	args := r.argsWithoutContext(method)
 	results := r.resultsWithoutError(method)
 
@@ -879,7 +879,7 @@ func (r *ClientRenderer) renderMethodParamsAndResultsTS(md *markdown.Markdown, m
 }
 
 // renderMethodErrorsTS генерирует описание возможных ошибок метода
-func (r *ClientRenderer) renderMethodErrorsTS(md *markdown.Markdown, method *shared.Method, contract *shared.Contract) {
+func (r *ClientRenderer) renderMethodErrorsTS(md *markdown.Markdown, method *core.Method, contract *core.Contract) {
 	// Используем информацию об ошибках из метода
 	if len(method.Errors) == 0 {
 		return
@@ -890,7 +890,7 @@ func (r *ClientRenderer) renderMethodErrorsTS(md *markdown.Markdown, method *sha
 	md.LF()
 
 	// Сортируем ошибки по HTTP коду для детерминированного порядка
-	errors := make([]*shared.ErrorInfo, len(method.Errors))
+	errors := make([]*core.ErrorInfo, len(method.Errors))
 	copy(errors, method.Errors)
 	sort.Slice(errors, func(i, j int) bool {
 		// Сначала ошибки с HTTP кодом, затем без
@@ -918,7 +918,7 @@ func (r *ClientRenderer) renderMethodErrorsTS(md *markdown.Markdown, method *sha
 }
 
 // renderBatchSectionTS генерирует секцию Batch запросов для JSON-RPC
-func (r *ClientRenderer) renderBatchSectionTS(md *markdown.Markdown, contracts []*shared.Contract, outDir string) {
+func (r *ClientRenderer) renderBatchSectionTS(md *markdown.Markdown, contracts []*core.Contract, outDir string) {
 	batchAnchor := generateAnchor("Batch запросы (JSON-RPC)")
 	md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", batchAnchor))
 	md.LF()
@@ -936,9 +936,9 @@ func (r *ClientRenderer) renderBatchSectionTS(md *markdown.Markdown, contracts [
 }
 
 // renderBatchExampleTS генерирует пример использования batch для TypeScript
-func (r *ClientRenderer) renderBatchExampleTS(md *markdown.Markdown, contracts []*shared.Contract, outDir string) {
+func (r *ClientRenderer) renderBatchExampleTS(md *markdown.Markdown, contracts []*core.Contract, outDir string) {
 	// Находим JSON-RPC контракты и методы для примеров
-	var jsonRPCContracts []*shared.Contract
+	var jsonRPCContracts []*core.Contract
 	for _, contract := range contracts {
 		if r.contains(contract.Annotations, TagServerJsonRPC) {
 			hasJsonRPCMethods := false
@@ -970,8 +970,8 @@ await client.batch(
 
 	// Используем первые два метода из разных контрактов или один контракт
 	exampleContract := jsonRPCContracts[0]
-	var exampleMethod1 *shared.Method
-	var exampleMethod2 *shared.Method
+	var exampleMethod1 *core.Method
+	var exampleMethod2 *core.Method
 	for _, method := range exampleContract.Methods {
 		if r.methodIsJsonRPC(exampleContract, method) {
 			if exampleMethod1 == nil {
@@ -1014,13 +1014,13 @@ await client.batch(
 		args1 := r.argsWithoutContext(exampleMethod1)
 		results1 := r.resultsWithoutError(exampleMethod1)
 		callbackName1 := "callback1"
-		
+
 		var paramValues1 []string
 		for _, arg := range args1 {
 			exampleValue := r.generateExampleValueFromVariable(arg, strings.Join(arg.Docs, "\n"), exampleContract.PkgPath)
 			paramValues1 = append(paramValues1, exampleValue)
 		}
-		
+
 		reqCall1 := fmt.Sprintf("  %s.req%s(%s", serviceVar, exampleMethod1.Name, callbackName1)
 		if len(paramValues1) > 0 {
 			reqCall1 += ", " + strings.Join(paramValues1, ", ")
@@ -1053,13 +1053,13 @@ await client.batch(
 		args2 := r.argsWithoutContext(exampleMethod2)
 		results2 := r.resultsWithoutError(exampleMethod2)
 		callbackName2 := "callback2"
-		
+
 		var paramValues2 []string
 		for _, arg := range args2 {
 			exampleValue := r.generateExampleValueFromVariable(arg, strings.Join(arg.Docs, "\n"), exampleContract.PkgPath)
 			paramValues2 = append(paramValues2, exampleValue)
 		}
-		
+
 		reqCall2 := fmt.Sprintf("  %s.req%s(%s", serviceVar, exampleMethod2.Name, callbackName2)
 		if len(paramValues2) > 0 {
 			reqCall2 += ", " + strings.Join(paramValues2, ", ")
@@ -1103,8 +1103,8 @@ func (r *ClientRenderer) renderErrorsSectionTS(md *markdown.Markdown, outDir str
 	md.H2("Обработка ошибок")
 
 	// Находим первый JSON-RPC контракт и метод для примера
-	var jsonrpcContract *shared.Contract
-	var jsonrpcMethod *shared.Method
+	var jsonrpcContract *core.Contract
+	var jsonrpcMethod *core.Method
 	for _, contract := range r.project.Contracts {
 		if r.contains(contract.Annotations, TagServerJsonRPC) {
 			for _, method := range contract.Methods {
@@ -1142,20 +1142,20 @@ func (r *ClientRenderer) renderErrorsSectionTS(md *markdown.Markdown, outDir str
 		clientMethodName := r.getClientMethodName(jsonrpcContract)
 		methodName := r.lcName(jsonrpcMethod.Name)
 		args := r.argsWithoutContext(jsonrpcMethod)
-		
+
 		var paramValues []string
 		for _, arg := range args {
 			exampleValue := r.generateExampleValueFromVariable(arg, strings.Join(arg.Docs, "\n"), jsonrpcContract.PkgPath)
 			paramValues = append(paramValues, exampleValue)
 		}
-		
+
 		var methodCall string
 		if len(paramValues) > 0 {
 			methodCall = fmt.Sprintf("%s.%s(%s)", serviceVar, methodName, strings.Join(paramValues, ", "))
 		} else {
 			methodCall = fmt.Sprintf("%s.%s()", serviceVar, methodName)
 		}
-		
+
 		codeExample = fmt.Sprintf(`import { Client } from './client';
 
 const client = new Client('http://localhost:9000');
@@ -1197,8 +1197,8 @@ try {
 	md.BulletList(errorCodes...)
 
 	// Находим первый HTTP контракт и метод для примера
-	var httpContract *shared.Contract
-	var httpMethod *shared.Method
+	var httpContract *core.Contract
+	var httpMethod *core.Method
 	for _, contract := range r.project.Contracts {
 		if r.contains(contract.Annotations, TagServerHTTP) {
 			for _, method := range contract.Methods {
@@ -1237,20 +1237,20 @@ try {
 		clientMethodName := r.getClientMethodName(httpContract)
 		methodName := r.lcName(httpMethod.Name)
 		args := r.argsWithoutContext(httpMethod)
-		
+
 		var paramValues []string
 		for _, arg := range args {
 			exampleValue := r.generateExampleValueFromVariable(arg, strings.Join(arg.Docs, "\n"), httpContract.PkgPath)
 			paramValues = append(paramValues, exampleValue)
 		}
-		
+
 		var methodCall string
 		if len(paramValues) > 0 {
 			methodCall = fmt.Sprintf("%s.%s(%s)", serviceVar, methodName, strings.Join(paramValues, ", "))
 		} else {
 			methodCall = fmt.Sprintf("%s.%s()", serviceVar, methodName)
 		}
-		
+
 		httpCodeExample = fmt.Sprintf(`import { Client } from './client';
 
 const client = new Client('http://localhost:9000');
@@ -1286,7 +1286,7 @@ try {
 }
 
 // tsTypeStringFromVariable возвращает строковое представление TypeScript типа из Variable
-func (r *ClientRenderer) tsTypeStringFromVariable(variable *shared.Variable, pkgPath string) string {
+func (r *ClientRenderer) tsTypeStringFromVariable(variable *core.Variable, pkgPath string) string {
 	schema := r.walkVariable(variable.Name, pkgPath, variable, nil, false)
 	return schema.typeLink()
 }
@@ -1316,7 +1316,7 @@ func (r *ClientRenderer) renderTemplate(templatePath string, data interface{}) (
 }
 
 // generateExampleValueFromVariable генерирует пример значения для переменной в TypeScript
-func (r *ClientRenderer) generateExampleValueFromVariable(variable *shared.Variable, docs, pkgPath string) string {
+func (r *ClientRenderer) generateExampleValueFromVariable(variable *core.Variable, docs, pkgPath string) string {
 	// Обрабатываем массивы и слайсы
 	if variable.IsSlice || variable.ArrayLen > 0 {
 		return "[]"
@@ -1352,7 +1352,7 @@ func (r *ClientRenderer) generateExampleValueFromVariable(variable *shared.Varia
 }
 
 // getClientMethodName возвращает правильное имя метода для получения клиента контракта
-func (r *ClientRenderer) getClientMethodName(contract *shared.Contract) string {
+func (r *ClientRenderer) getClientMethodName(contract *core.Contract) string {
 	fileName := r.tsFileName(contract)
 	// Преобразуем snake_case в lowerCamelCase для имени метода
 	// Например: "http_service" -> "httpService", "json_rpc_service" -> "jsonRpcService"
@@ -1365,24 +1365,24 @@ func (r *ClientRenderer) getClientMethodName(contract *shared.Contract) string {
 			methodName += strings.ToUpper(string(part[0])) + part[1:]
 		}
 	}
-	
+
 	// Для HTTP контрактов добавляем суффикс HTTP
 	if r.contains(contract.Annotations, TagServerHTTP) {
 		methodName += "HTTP"
 	}
-	
+
 	return methodName
 }
 
 // getStructType возвращает структуру типа по typeID
-func (r *ClientRenderer) getStructType(typeID, pkgPath string) (structType *shared.Type, typeName string, pkg string) {
+func (r *ClientRenderer) getStructType(typeID, pkgPath string) (structType *core.Type, typeName string, pkg string) {
 	typ, ok := r.project.Types[typeID]
 	if !ok {
 		return nil, "", ""
 	}
 
 	// Проверяем, является ли тип структурой
-	if typ.Kind != shared.TypeKindStruct || typ.TypeName == "" {
+	if typ.Kind != core.TypeKindStruct || typ.TypeName == "" {
 		return nil, "", ""
 	}
 
@@ -1397,7 +1397,7 @@ func (r *ClientRenderer) getStructType(typeID, pkgPath string) (structType *shar
 }
 
 // getTypeLinkFromVariableTS возвращает ссылку на тип для переменной (параметр или возвращаемое значение) в TypeScript
-func (r *ClientRenderer) getTypeLinkFromVariableTS(variable *shared.Variable, pkgPath string) string {
+func (r *ClientRenderer) getTypeLinkFromVariableTS(variable *core.Variable, pkgPath string) string {
 	switch {
 	case variable.IsSlice || variable.ArrayLen > 0:
 		// Для массивов/слайсов - ссылка на тип элемента (без [])
@@ -1435,12 +1435,12 @@ func (r *ClientRenderer) getTypeLinkTS(typeID, pkgPath string) string {
 	if !ok {
 		return "-"
 	}
-	
+
 	// Проверяем, является ли тип исключаемым (time.Time и т.д.)
 	if r.isExplicitlyExcludedType(typ) {
 		return "-" // Встроенный тип TypeScript, без ссылки
 	}
-	
+
 	// Проверяем наличие маршалера - типы с маршалерами конвертируются в any
 	// Для ссылок проверяем оба маршалера (тип может использоваться и в запросах, и в ответах)
 	if r.hasMarshaler(typ, true) || r.hasMarshaler(typ, false) {
@@ -1452,7 +1452,7 @@ func (r *ClientRenderer) getTypeLinkTS(typeID, pkgPath string) string {
 		// Это структура - создаём ссылку на таблицу типа
 		// Получаем строковое представление типа для отображения (с namespace)
 		typeStr := r.tsTypeString(typeID, pkgPath)
-		
+
 		// Для создания якоря всегда используем полное имя с namespace
 		// В разделе "Общие типы" все типы отображаются с namespace (например, "dto.SomeStruct")
 		// Поэтому якорь должен соответствовать полному имени типа с namespace
@@ -1460,18 +1460,18 @@ func (r *ClientRenderer) getTypeLinkTS(typeID, pkgPath string) string {
 		if !ok {
 			return "-"
 		}
-		
+
 		// Проверяем, является ли тип исключаемым (time.Time и т.д.)
 		if r.isExplicitlyExcludedType(typ) {
 			return "-" // Встроенный тип TypeScript, без ссылки
 		}
-		
+
 		// Проверяем наличие маршалера - типы с маршалерами конвертируются в any
 		// Для ссылок проверяем оба маршалера (тип может использоваться и в запросах, и в ответах)
 		if r.hasMarshaler(typ, true) || r.hasMarshaler(typ, false) {
 			return "-" // any - встроенный тип TypeScript, без ссылки
 		}
-		
+
 		// Определяем namespace для типа
 		namespace := ""
 		switch {
@@ -1490,7 +1490,7 @@ func (r *ClientRenderer) getTypeLinkTS(typeID, pkgPath string) string {
 				namespace = parts[len(parts)-1]
 			}
 		}
-		
+
 		// Формируем полное имя типа для якоря (с namespace)
 		typeNameForAnchor := typ.TypeName
 		if typeNameForAnchor == "" {
@@ -1500,7 +1500,7 @@ func (r *ClientRenderer) getTypeLinkTS(typeID, pkgPath string) string {
 		if namespace != "" {
 			fullTypeNameForAnchor = fmt.Sprintf("%s.%s", namespace, typeNameForAnchor)
 		}
-		
+
 		// Якорь должен включать namespace (например, "dto.SomeStruct" -> "#dto.somestruct")
 		typeAnchor := generateAnchor(fullTypeNameForAnchor)
 		return fmt.Sprintf("[%s](#%s)", typeStr, typeAnchor)
@@ -1547,7 +1547,7 @@ func (r *ClientRenderer) tsTypeString(typeID, pkgPath string) string {
 		// Для других исключаемых типов используем typeIDToTSType
 		return r.typeIDToTSType(typeID)
 	}
-	
+
 	// Проверяем наличие маршалера - типы с маршалерами конвертируются в any
 	// Для отображения типа в README проверяем оба маршалера (тип может использоваться и в запросах, и в ответах)
 	if r.hasMarshaler(typ, true) || r.hasMarshaler(typ, false) {
@@ -1649,7 +1649,7 @@ func (r *ClientRenderer) collectStructTypesTS() map[string]*typeUsageTS {
 						continue
 					}
 				}
-				
+
 				if structType, typeName, pkg := r.getStructType(result.TypeID, contract.PkgPath); structType != nil {
 					// Формируем ключ
 					keyTypeName := typeName
@@ -1706,7 +1706,7 @@ func (r *ClientRenderer) renderAllTypesTS(md *markdown.Markdown, allTypes map[st
 			parts := strings.SplitN(usage.fullTypeName, ".", 2)
 			namespace = parts[0]
 		}
-		
+
 		if typesByNamespace[namespace] == nil {
 			typesByNamespace[namespace] = make([]*typeUsageTS, 0)
 		}
@@ -1723,7 +1723,7 @@ func (r *ClientRenderer) renderAllTypesTS(md *markdown.Markdown, allTypes map[st
 	// Рендерим типы по namespace
 	for _, namespace := range namespaceKeys {
 		types := typesByNamespace[namespace]
-		
+
 		// Сортируем типы внутри namespace
 		sort.Slice(types, func(i, j int) bool {
 			return types[i].fullTypeName < types[j].fullTypeName
@@ -1741,7 +1741,7 @@ func (r *ClientRenderer) renderAllTypesTS(md *markdown.Markdown, allTypes map[st
 
 		for _, usage := range types {
 			// Получаем структуру типа - ищем по pkgPath и typeName
-			var typ *shared.Type
+			var typ *core.Type
 			for _, t := range r.project.Types {
 				if t.TypeName == usage.typeName {
 					// Проверяем соответствие pkgPath
@@ -1771,10 +1771,10 @@ func (r *ClientRenderer) renderAllTypesTS(md *markdown.Markdown, allTypes map[st
 
 			// Проверяем, является ли тип из внешней библиотеки
 			isExternal := typ != nil && typ.ImportPkgPath != "" && !r.isTypeFromCurrentProject(typ.ImportPkgPath)
-			
+
 			// В TypeScript все типы должны быть локальными (внешние типы конвертируются в встроенные)
 			// Поэтому не выводим информацию о внешних библиотеках
-			if typ != nil && typ.Kind == shared.TypeKindStruct && !isExternal {
+			if typ != nil && typ.Kind == core.TypeKindStruct && !isExternal {
 				// Локальная структура - выводим таблицу полей
 				r.renderStructTypeTableTS(md, typ, usage.fullTypeName, usage.pkgPath)
 			} else if typ != nil && !isExternal {
@@ -1794,7 +1794,7 @@ func (r *ClientRenderer) renderAllTypesTS(md *markdown.Markdown, allTypes map[st
 
 // renderStructTypeTableTS генерирует таблицу для типа структуры в TypeScript
 // Вызывается только для локальных типов (не из внешних библиотек)
-func (r *ClientRenderer) renderStructTypeTableTS(md *markdown.Markdown, structType *shared.Type, typeName string, pkgPath string) {
+func (r *ClientRenderer) renderStructTypeTableTS(md *markdown.Markdown, structType *core.Type, typeName string, pkgPath string) {
 	// Заголовок таблицы типа
 	typeAnchor := generateAnchor(typeName)
 	md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", typeAnchor))
@@ -1868,7 +1868,7 @@ func (r *ClientRenderer) renderStructTypeTableTS(md *markdown.Markdown, structTy
 }
 
 // tsTypeStringFromStructField возвращает строковое представление TypeScript типа из StructField
-func (r *ClientRenderer) tsTypeStringFromStructField(field *shared.StructField, pkgPath string) string {
+func (r *ClientRenderer) tsTypeStringFromStructField(field *core.StructField, pkgPath string) string {
 	// Обрабатываем массивы и слайсы
 	if field.IsSlice || field.ArrayLen > 0 {
 		elemType := r.tsTypeString(field.TypeID, pkgPath)
@@ -1890,7 +1890,7 @@ func (r *ClientRenderer) tsTypeStringFromStructField(field *shared.StructField, 
 }
 
 // getTypeLinkFromStructFieldTS возвращает ссылку на тип для поля структуры в TypeScript
-func (r *ClientRenderer) getTypeLinkFromStructFieldTS(field *shared.StructField, pkgPath string) string {
+func (r *ClientRenderer) getTypeLinkFromStructFieldTS(field *core.StructField, pkgPath string) string {
 	switch {
 	case field.IsSlice || field.ArrayLen > 0:
 		// Для массивов/слайсов - ссылка на тип элемента (без [])
@@ -1915,4 +1915,3 @@ func (r *ClientRenderer) getTypeLinkFromStructFieldTS(field *shared.StructField,
 		return r.getTypeLinkTS(field.TypeID, pkgPath)
 	}
 }
-

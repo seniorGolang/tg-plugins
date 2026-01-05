@@ -1,4 +1,4 @@
-package shared
+package core
 
 // Logger предоставляет функции логирования.
 type Logger interface {
@@ -19,3 +19,4 @@ func SetLogger(l Logger) {
 func GetLogger() Logger {
 	return logger
 }
+

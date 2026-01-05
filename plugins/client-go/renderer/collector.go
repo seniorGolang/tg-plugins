@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"strings"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // CollectTypeIDsForExchange собирает все typeID типов, используемых в exchange структурах контракта.
 // Возвращает set typeID для всех типов, которые используются в контракте.
 // При генерации будем использовать project.Types напрямую, проверяя для каждого типа,
 // нужно ли его генерировать локально (если из текущего проекта) или использовать через импорт.
-func (r *ClientRenderer) CollectTypeIDsForExchange(contract *shared.Contract) map[string]bool {
+func (r *ClientRenderer) CollectTypeIDsForExchange(contract *core.Contract) map[string]bool {
 
 	collectedTypeIDs := make(map[string]bool)
 	processedTypes := make(map[string]bool)
@@ -104,25 +104,25 @@ func (r *ClientRenderer) collectTypeIDRecursive(typeID string, collectedTypeIDs 
 
 	// Рекурсивно обходим зависимые типы (используя уже собранные данные Core)
 	switch typ.Kind {
-	case shared.TypeKindArray:
+	case core.TypeKindArray:
 		if typ.ArrayOfID != "" {
 			r.collectTypeIDRecursive(typ.ArrayOfID, collectedTypeIDs, processedTypes)
 		}
-	case shared.TypeKindMap:
+	case core.TypeKindMap:
 		if typ.MapKeyID != "" {
 			r.collectTypeIDRecursive(typ.MapKeyID, collectedTypeIDs, processedTypes)
 		}
 		if typ.MapValueID != "" {
 			r.collectTypeIDRecursive(typ.MapValueID, collectedTypeIDs, processedTypes)
 		}
-	case shared.TypeKindAlias:
+	case core.TypeKindAlias:
 		if typ.AliasOf != "" {
 			r.collectTypeIDRecursive(typ.AliasOf, collectedTypeIDs, processedTypes)
 		}
 		if typ.UnderlyingTypeID != "" {
 			r.collectTypeIDRecursive(typ.UnderlyingTypeID, collectedTypeIDs, processedTypes)
 		}
-	case shared.TypeKindStruct:
+	case core.TypeKindStruct:
 		for _, field := range typ.StructFields {
 			if field.TypeID != "" {
 				r.collectTypeIDRecursive(field.TypeID, collectedTypeIDs, processedTypes)
@@ -134,7 +134,7 @@ func (r *ClientRenderer) collectTypeIDRecursive(typeID string, collectedTypeIDs 
 				r.collectTypeIDRecursive(field.MapValueID, collectedTypeIDs, processedTypes)
 			}
 		}
-	case shared.TypeKindInterface:
+	case core.TypeKindInterface:
 		for _, embedded := range typ.EmbeddedInterfaces {
 			if embedded.TypeID != "" {
 				r.collectTypeIDRecursive(embedded.TypeID, collectedTypeIDs, processedTypes)
@@ -252,7 +252,7 @@ func (r *ClientRenderer) isExcludedTypeID(typeID string) bool {
 }
 
 // isExcludedType проверяет, является ли тип исключением.
-func (r *ClientRenderer) isExcludedType(typ *shared.Type) bool {
+func (r *ClientRenderer) isExcludedType(typ *core.Type) bool {
 	if typ == nil {
 		return false
 	}
@@ -280,7 +280,7 @@ func (r *ClientRenderer) isExcludedType(typ *shared.Type) bool {
 }
 
 // isExplicitlyExcludedType проверяет явные исключения для известных типов.
-func (r *ClientRenderer) isExplicitlyExcludedType(typ *shared.Type) bool {
+func (r *ClientRenderer) isExplicitlyExcludedType(typ *core.Type) bool {
 	if typ == nil {
 		return false
 	}
@@ -344,4 +344,3 @@ func (r *ClientRenderer) isExplicitlyExcludedType(typ *shared.Type) bool {
 
 	return false
 }
-

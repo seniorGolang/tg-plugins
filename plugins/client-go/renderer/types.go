@@ -12,7 +12,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // RenderClientTypes генерирует локальные версии всех типов, используемых в exchange структурах.
@@ -73,52 +73,52 @@ func (r *ClientRenderer) RenderClientTypes(collectedTypeIDs map[string]bool) err
 		// Это позволяет сохранить семантику алиаса в клиенте
 		if !isFromCurrentProject {
 			// Для внешних типов генерируем только алиасы
-			if typ.Kind == shared.TypeKindAlias && typ.AliasOf != "" {
+			if typ.Kind == core.TypeKindAlias && typ.AliasOf != "" {
 				// Алиас на внешний тип - генерируем как алиас
 			} else {
 				// Остальные внешние типы не генерируем
 				continue
 			}
 		}
-		
+
 		// ВАЖНО: пропускаем анонимные типы (interface:anonymous, struct:anonymous и т.д.)
 		// так как они не могут быть сгенерированы как отдельные типы
-		if strings.Contains(typeID, ":interface:anonymous") || 
-		   strings.Contains(typeID, ":struct:anonymous") || 
-		   strings.Contains(typeID, ":func:anonymous") {
+		if strings.Contains(typeID, ":interface:anonymous") ||
+			strings.Contains(typeID, ":struct:anonymous") ||
+			strings.Contains(typeID, ":func:anonymous") {
 			continue
 		}
-		
-			// Получаем имя типа для имени файла
-			typeName := typ.TypeName
-			if typeName == "" {
-				// Извлекаем имя из typeID (формат "pkgPath:TypeName" или просто "TypeName")
-				if strings.Contains(typeID, ":") {
-					parts := strings.SplitN(typeID, ":", 2)
-					if len(parts) == 2 {
-						typeName = parts[1]
-						// ВАЖНО: для анонимных типов (interface:anonymous, struct:anonymous и т.д.)
-						// не генерируем отдельный файл, так как это невалидное имя типа
-						if strings.Contains(typeName, ":") || typeName == "anonymous" || typeName == "interface" || typeName == "struct" || typeName == "func" {
-							continue
-						}
-					} else {
-						typeName = typeID
+
+		// Получаем имя типа для имени файла
+		typeName := typ.TypeName
+		if typeName == "" {
+			// Извлекаем имя из typeID (формат "pkgPath:TypeName" или просто "TypeName")
+			if strings.Contains(typeID, ":") {
+				parts := strings.SplitN(typeID, ":", 2)
+				if len(parts) == 2 {
+					typeName = parts[1]
+					// ВАЖНО: для анонимных типов (interface:anonymous, struct:anonymous и т.д.)
+					// не генерируем отдельный файл, так как это невалидное имя типа
+					if strings.Contains(typeName, ":") || typeName == "anonymous" || typeName == "interface" || typeName == "struct" || typeName == "func" {
+						continue
 					}
 				} else {
 					typeName = typeID
 				}
+			} else {
+				typeName = typeID
 			}
+		}
 
 		// ВАЖНО: если тип собран, он ДОЛЖЕН быть сгенерирован
 		// Генерируем тип напрямую в зависимости от его структуры
 		var typeCode Code
 		switch {
-		case typ.Kind == shared.TypeKindStruct:
+		case typ.Kind == core.TypeKindStruct:
 			typeCode = r.generateClientStruct(ctx, typeName, typ)
-		case typ.Kind == shared.TypeKindInterface:
+		case typ.Kind == core.TypeKindInterface:
 			typeCode = r.generateClientInterface(ctx, typeName, typ)
-		case typ.Kind == shared.TypeKindAlias:
+		case typ.Kind == core.TypeKindAlias:
 			// Алиасы (type ID = string)
 			// ВАЖНО: алиасы всегда генерируем, чтобы сохранить семантику (type Alias = BaseType)
 			typeCode = r.generateClientAlias(ctx, typeName, typ)
@@ -132,26 +132,26 @@ func (r *ClientRenderer) RenderClientTypes(collectedTypeIDs map[string]bool) err
 		}
 
 		if typeCode != nil {
-		// Создаем отдельный файл для каждого типа
-		typeFile := NewSrcFile("dto")
-		typeFile.PackageComment(DoNotEdit)
-		typeCtx := context.WithValue(context.Background(), keyCode, typeFile) // nolint
-		typeCtx = context.WithValue(typeCtx, keyPackage, "dto")              // nolint
-		
-		// ВАЖНО: перегенерируем typeCode с правильным контекстом для алиасов
-		// Это нужно для правильной установки ImportName в правильном файле
-		// Согласно JENNIFER_IMPORTS_GUIDE.md: ImportName должен вызываться с правильным srcFile в контексте
-		if typ.Kind == shared.TypeKindAlias && typ.AliasOf != "" {
-			typeCode = r.generateClientAlias(typeCtx, typeName, typ)
-		}
-		
-		typeFile.Add(typeCode)
+			// Создаем отдельный файл для каждого типа
+			typeFile := NewSrcFile("dto")
+			typeFile.PackageComment(DoNotEdit)
+			typeCtx := context.WithValue(context.Background(), keyCode, typeFile) // nolint
+			typeCtx = context.WithValue(typeCtx, keyPackage, "dto")               // nolint
 
-		// Сохраняем файл с именем типа (в нижнем регистре)
-		fileName := strings.ToLower(typeName) + ".go"
-		if err := typeFile.Save(path.Join(dtoDir, fileName)); err != nil {
-			return fmt.Errorf("не удалось сохранить файл типа %s: %w", typeName, err)
-		}
+			// ВАЖНО: перегенерируем typeCode с правильным контекстом для алиасов
+			// Это нужно для правильной установки ImportName в правильном файле
+			// Согласно JENNIFER_IMPORTS_GUIDE.md: ImportName должен вызываться с правильным srcFile в контексте
+			if typ.Kind == core.TypeKindAlias && typ.AliasOf != "" {
+				typeCode = r.generateClientAlias(typeCtx, typeName, typ)
+			}
+
+			typeFile.Add(typeCode)
+
+			// Сохраняем файл с именем типа (в нижнем регистре)
+			fileName := strings.ToLower(typeName) + ".go"
+			if err := typeFile.Save(path.Join(dtoDir, fileName)); err != nil {
+				return fmt.Errorf("не удалось сохранить файл типа %s: %w", typeName, err)
+			}
 		}
 	}
 
@@ -159,7 +159,7 @@ func (r *ClientRenderer) RenderClientTypes(collectedTypeIDs map[string]bool) err
 }
 
 // generateClientStruct генерирует код для структуры.
-func (r *ClientRenderer) generateClientStruct(ctx context.Context, typeName string, typ *shared.Type) Code {
+func (r *ClientRenderer) generateClientStruct(ctx context.Context, typeName string, typ *core.Type) Code {
 
 	return Type().Id(typeName).StructFunc(func(gr *Group) {
 		for _, field := range typ.StructFields {
@@ -170,7 +170,7 @@ func (r *ClientRenderer) generateClientStruct(ctx context.Context, typeName stri
 }
 
 // generateClientStructField генерирует код для поля структуры.
-func (r *ClientRenderer) generateClientStructField(ctx context.Context, field *shared.StructField) *Statement {
+func (r *ClientRenderer) generateClientStructField(ctx context.Context, field *core.StructField) *Statement {
 
 	// Обрабатываем встроенные поля (embedded fields) - когда Name пустой
 	var s *Statement
@@ -240,7 +240,7 @@ func (r *ClientRenderer) generateClientStructField(ctx context.Context, field *s
 }
 
 // generateClientInterface генерирует код для интерфейса.
-func (r *ClientRenderer) generateClientInterface(ctx context.Context, typeName string, typ *shared.Type) Code {
+func (r *ClientRenderer) generateClientInterface(ctx context.Context, typeName string, typ *core.Type) Code {
 
 	return Type().Id(typeName).InterfaceFunc(func(gr *Group) {
 		// Добавляем встроенные интерфейсы
@@ -258,29 +258,29 @@ func (r *ClientRenderer) generateClientInterface(ctx context.Context, typeName s
 }
 
 // generateClientMethod генерирует код для метода интерфейса.
-func (r *ClientRenderer) generateClientMethod(ctx context.Context, method *shared.Function) *Statement {
+func (r *ClientRenderer) generateClientMethod(ctx context.Context, method *core.Function) *Statement {
 
 	s := Id(method.Name)
 
-		// Параметры
-		args := make([]Code, 0, len(method.Args))
-		for _, arg := range method.Args {
-			argType := r.fieldTypeFromVariableForClient(ctx, arg, false)
-			argName := arg.Name
-			if argName == "" {
-				argName = "_"
-			} else {
-				argName = ToLowerCamel(argName)
-			}
+	// Параметры
+	args := make([]Code, 0, len(method.Args))
+	for _, arg := range method.Args {
+		argType := r.fieldTypeFromVariableForClient(ctx, arg, false)
+		argName := arg.Name
+		if argName == "" {
+			argName = "_"
+		} else {
+			argName = ToLowerCamel(argName)
+		}
 		args = append(args, Id(argName).Add(argType))
 	}
 
-		// Результаты
-		results := make([]Code, 0, len(method.Results))
-		for _, result := range method.Results {
-			resultType := r.fieldTypeFromVariableForClient(ctx, result, false)
-			results = append(results, resultType)
-		}
+	// Результаты
+	results := make([]Code, 0, len(method.Results))
+	for _, result := range method.Results {
+		resultType := r.fieldTypeFromVariableForClient(ctx, result, false)
+		results = append(results, resultType)
+	}
 
 	s = s.Params(args...)
 	if len(results) > 0 {
@@ -291,7 +291,7 @@ func (r *ClientRenderer) generateClientMethod(ctx context.Context, method *share
 }
 
 // generateClientAlias генерирует код для алиаса типа или именованного типа с базовым типом.
-func (r *ClientRenderer) generateClientAlias(ctx context.Context, typeName string, typ *shared.Type) Code {
+func (r *ClientRenderer) generateClientAlias(ctx context.Context, typeName string, typ *core.Type) Code {
 
 	// Для алиасов всегда используем базовый тип через AliasOf
 	// Это позволяет сохранить семантику алиаса в клиенте (type Alias = BaseType)
@@ -306,7 +306,7 @@ func (r *ClientRenderer) generateClientAlias(ctx context.Context, typeName strin
 	}
 
 	// Обрабатываем map типы отдельно
-	if typ.Kind == shared.TypeKindMap {
+	if typ.Kind == core.TypeKindMap {
 		if typ.MapKeyID != "" && typ.MapValueID != "" {
 			keyType := r.fieldTypeForClient(ctx, typ.MapKeyID, typ.MapKeyPointers, false)
 			valueType := r.fieldTypeForClient(ctx, typ.MapValueID, typ.ElementPointers, false)
@@ -323,7 +323,7 @@ func (r *ClientRenderer) generateClientAlias(ctx context.Context, typeName strin
 
 	// Fallback на базовый Kind (если UnderlyingKind не установлен, используем Kind)
 	// Но не для map типов - они уже обработаны выше
-	if typ.Kind != shared.TypeKindMap {
+	if typ.Kind != core.TypeKindMap {
 		return Type().Id(typeName).Id(string(typ.Kind))
 	}
 
@@ -408,7 +408,7 @@ func (r *ClientRenderer) fieldTypeForClient(ctx context.Context, typeID string, 
 
 	// Обрабатываем в зависимости от вида типа
 	switch typ.Kind {
-	case shared.TypeKindArray:
+	case core.TypeKindArray:
 		switch {
 		case typ.IsSlice:
 			c.Index()
@@ -422,7 +422,7 @@ func (r *ClientRenderer) fieldTypeForClient(ctx context.Context, typeID string, 
 		}
 		return c
 
-	case shared.TypeKindMap:
+	case core.TypeKindMap:
 		// ВАЖНО: если это именованный map тип из текущего проекта, используем имя типа
 		if typ.TypeName != "" && typ.ImportPkgPath != "" {
 			if r.isTypeFromCurrentProject(typ.ImportPkgPath) {
@@ -447,7 +447,7 @@ func (r *ClientRenderer) fieldTypeForClient(ctx context.Context, typeID string, 
 		// Если MapKeyID или MapValueID пустые, используем string для ключа и any для значения
 		return c.Map(Id("string")).Id("any")
 
-	case shared.TypeKindChan:
+	case core.TypeKindChan:
 		chanType := c
 		switch typ.ChanDirection {
 		case 1: // send only
@@ -462,7 +462,7 @@ func (r *ClientRenderer) fieldTypeForClient(ctx context.Context, typeID string, 
 		}
 		return chanType
 
-	case shared.TypeKindStruct, shared.TypeKindInterface:
+	case core.TypeKindStruct, core.TypeKindInterface:
 		// ВАЖНО: все типы из текущего проекта должны генерироваться локально и использоваться из dto пакета
 		if typ.ImportPkgPath != "" && typ.TypeName != "" {
 			// Проверяем, является ли тип из текущего проекта
@@ -498,8 +498,8 @@ func (r *ClientRenderer) fieldTypeForClient(ctx context.Context, typeID string, 
 			}
 			return c.Qual(typ.ImportPkgPath, typ.TypeName)
 		}
-			// Если TypeName пустой, это может быть анонимный интерфейс (interface{})
-			if strings.Contains(typeID, ":interface:anonymous") || typ.Kind == shared.TypeKindAny {
+		// Если TypeName пустой, это может быть анонимный интерфейс (interface{})
+		if strings.Contains(typeID, ":interface:anonymous") || typ.Kind == core.TypeKindAny {
 			return c.Id("any")
 		}
 		// Если нет ImportPkgPath, используем TypeName напрямую
@@ -509,7 +509,7 @@ func (r *ClientRenderer) fieldTypeForClient(ctx context.Context, typeID string, 
 		// Fallback на any для пустых интерфейсов
 		return c.Id("any")
 
-	case shared.TypeKindFunction:
+	case core.TypeKindFunction:
 		args := make([]Code, 0, len(typ.FunctionArgs))
 		for _, arg := range typ.FunctionArgs {
 			argType := r.fieldTypeFromVariableForClient(ctx, arg, false)
@@ -522,7 +522,7 @@ func (r *ClientRenderer) fieldTypeForClient(ctx context.Context, typeID string, 
 		}
 		return c.Func().Params(args...).Params(results...)
 
-	case shared.TypeKindAlias:
+	case core.TypeKindAlias:
 		// ВАЖНО: для алиасов из текущего проекта используем локальный тип из dto пакета
 		// Это позволяет сохранить семантику алиаса в клиенте
 		if typ.ImportPkgPath != "" && typ.TypeName != "" {
@@ -559,7 +559,7 @@ func (r *ClientRenderer) fieldTypeForClient(ctx context.Context, typeID string, 
 						isAliasFromCurrentProject = r.isTypeFromCurrentProject(baseType.ImportPkgPath)
 					}
 				}
-				
+
 				if isAliasFromCurrentProject {
 					// Алиас из текущего проекта - используем имя алиаса
 					if currentPkg, ok := ctx.Value(keyPackage).(string); ok && currentPkg == "dto" {
@@ -605,11 +605,11 @@ func (r *ClientRenderer) fieldTypeForClient(ctx context.Context, typeID string, 
 		// Если ничего не найдено, используем Kind
 		return c.Id(string(typ.Kind))
 
-	case shared.TypeKindString, shared.TypeKindInt, shared.TypeKindInt8, shared.TypeKindInt16,
-		shared.TypeKindInt32, shared.TypeKindInt64, shared.TypeKindUint, shared.TypeKindUint8,
-		shared.TypeKindUint16, shared.TypeKindUint32, shared.TypeKindUint64,
-		shared.TypeKindFloat32, shared.TypeKindFloat64, shared.TypeKindBool,
-		shared.TypeKindByte, shared.TypeKindRune, shared.TypeKindError, shared.TypeKindAny:
+	case core.TypeKindString, core.TypeKindInt, core.TypeKindInt8, core.TypeKindInt16,
+		core.TypeKindInt32, core.TypeKindInt64, core.TypeKindUint, core.TypeKindUint8,
+		core.TypeKindUint16, core.TypeKindUint32, core.TypeKindUint64,
+		core.TypeKindFloat32, core.TypeKindFloat64, core.TypeKindBool,
+		core.TypeKindByte, core.TypeKindRune, core.TypeKindError, core.TypeKindAny:
 		// ВАЖНО: все типы из текущего проекта должны генерироваться локально и использоваться из dto пакета
 		// Если у типа есть ImportPkgPath и TypeName, это именованный тип (например, UserID int64, Email string)
 		if typ.ImportPkgPath != "" && typ.TypeName != "" {
@@ -676,7 +676,7 @@ func (r *ClientRenderer) isBuiltinType(typeID string) bool {
 }
 
 // fieldTypeFromVariableForClient генерирует тип из Variable для клиента.
-func (r *ClientRenderer) fieldTypeFromVariableForClient(ctx context.Context, variable *shared.Variable, allowEllipsis bool) *Statement {
+func (r *ClientRenderer) fieldTypeFromVariableForClient(ctx context.Context, variable *core.Variable, allowEllipsis bool) *Statement {
 
 	c := &Statement{}
 
@@ -750,4 +750,3 @@ func (r *ClientRenderer) fieldTypeFromVariableForClient(ctx context.Context, var
 	// Базовый тип
 	return c.Add(r.fieldTypeForClient(ctx, variable.TypeID, 0, false))
 }
-

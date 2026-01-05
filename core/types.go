@@ -1,4 +1,9 @@
-package shared
+package core
+
+import (
+	"encoding/json"
+	"errors"
+)
 
 // Project содержит всю собранную информацию о проекте.
 type Project struct {
@@ -42,36 +47,36 @@ type Contract struct {
 	FilePath        string                `json:"filePath"`
 	ID              string                `json:"id"`
 	Docs            []string              `json:"docs,omitempty"`
-	Annotations     map[string]string     `json:"annotations,omitempty"` // tags.DocTags заменен на map[string]string для WASM
+	Annotations     map[string]string    `json:"annotations,omitempty"` // tags.DocTags заменен на map[string]string для WASM
 	Methods         []*Method             `json:"methods,omitempty"`
 	Implementations []*ImplementationInfo `json:"implementations,omitempty"`
 }
 
 // Method представляет метод контракта.
 type Method struct {
-	Name        string            `json:"name"`
-	ContractID  string            `json:"contractID"`
-	Args        []*Variable       `json:"args,omitempty"`
-	Results     []*Variable       `json:"results,omitempty"`
-	Docs        []string          `json:"docs,omitempty"`
+	Name        string       `json:"name"`
+	ContractID  string       `json:"contractID"`
+	Args        []*Variable  `json:"args,omitempty"`
+	Results     []*Variable  `json:"results,omitempty"`
+	Docs        []string     `json:"docs,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"` // tags.DocTags заменен на map[string]string для WASM
-	Errors      []*ErrorInfo      `json:"errors,omitempty"`
-	Handler     *HandlerInfo      `json:"handler,omitempty"`
+	Errors      []*ErrorInfo `json:"errors,omitempty"`
+	Handler     *HandlerInfo `json:"handler,omitempty"`
 }
 
 // Variable представляет переменную (аргумент или результат метода).
 type Variable struct {
-	Name             string            `json:"name"`
-	TypeID           string            `json:"typeID,omitempty"`
-	NumberOfPointers int               `json:"numberOfPointers,omitempty"`
-	IsSlice          bool              `json:"isSlice,omitempty"`
-	ArrayLen         int               `json:"arrayLen,omitempty"`
-	IsEllipsis       bool              `json:"isEllipsis,omitempty"`
-	ElementPointers  int               `json:"elementPointers,omitempty"` // Для элементов массивов/слайсов и значений map
-	MapKeyID         string            `json:"mapKeyID,omitempty"`
-	MapValueID       string            `json:"mapValueID,omitempty"`
-	MapKeyPointers   int               `json:"mapKeyPointers,omitempty"`
-	Docs             []string          `json:"docs,omitempty"`
+	Name             string       `json:"name"`
+	TypeID           string       `json:"typeID,omitempty"`
+	NumberOfPointers int          `json:"numberOfPointers,omitempty"`
+	IsSlice          bool         `json:"isSlice,omitempty"`
+	ArrayLen         int          `json:"arrayLen,omitempty"`
+	IsEllipsis       bool         `json:"isEllipsis,omitempty"`
+	ElementPointers  int          `json:"elementPointers,omitempty"` // Для элементов массивов/слайсов и значений map
+	MapKeyID         string       `json:"mapKeyID,omitempty"`
+	MapValueID       string       `json:"mapValueID,omitempty"`
+	MapKeyPointers   int          `json:"mapKeyPointers,omitempty"`
+	Docs             []string     `json:"docs,omitempty"`
 	Annotations      map[string]string `json:"annotations,omitempty"` // tags.DocTags заменен на map[string]string для WASM
 }
 
@@ -155,11 +160,11 @@ type Type struct {
 
 	AliasOf string `json:"aliasOf,omitempty"`
 
-	ArrayLen        int    `json:"arrayLen,omitempty"`
-	IsSlice         bool   `json:"isSlice,omitempty"`
-	IsEllipsis      bool   `json:"isEllipsis,omitempty"`
-	ArrayOfID       string `json:"arrayOfID,omitempty"`
-	ElementPointers int    `json:"elementPointers,omitempty"` // Для элементов массивов/слайсов и значений map
+	ArrayLen      int    `json:"arrayLen,omitempty"`
+	IsSlice       bool   `json:"isSlice,omitempty"`
+	IsEllipsis    bool   `json:"isEllipsis,omitempty"`
+	ArrayOfID     string `json:"arrayOfID,omitempty"`
+	ElementPointers int  `json:"elementPointers,omitempty"` // Для элементов массивов/слайсов и значений map
 
 	MapKeyID       string `json:"mapKeyID,omitempty"`
 	MapValueID     string `json:"mapValueID,omitempty"`
@@ -252,15 +257,34 @@ type PluginInfo struct {
 	// Формат: имена команд (например: ["go", "git", "npm"])
 	AllowedShellCMDs []string `json:"allowedShellCMDs,omitempty"`
 
-	// NoProject - указывает, что плагину не нужны данные проекта Go (контракты, сервисы, типы).
-	// Если true, парсинг проекта через core.Collect не выполняется, и в Execute передается пустой проект.
-	// По умолчанию false (проект нужен) для обратной совместимости.
-	NoProject bool `json:"noProject,omitempty"`
+	// Dependencies - список зависимостей плагина.
+	// Формат: ["plugin-name1@^1.0.0", "plugin-name2@^2.1.0"]
+	// Версия указывается с учетом semver совместимости (^, ~, >= и т.д.).
+	// Для трансформеров определяет порядок выполнения.
+	// Для команд определяет плагины, которые должны выполниться перед командой.
+	// Если версия не указана, то совместимость с любыми версиями.
+	// Если зависимость не установлена, tg предлагает её установить.
+	Dependencies []string `json:"dependencies,omitempty"`
+
+	// AlwaysRun - для трансформеров: выполнять ли всегда перед командами.
+	// По умолчанию false (выполняется только при наличии зависимостей).
+	AlwaysRun bool `json:"alwaysRun,omitempty"`
 }
 
+// PluginType определяет тип плагина.
+type PluginType string
+
+const (
+	// PluginTypeCommand - плагин-команда.
+	PluginTypeCommand PluginType = "command"
+	// PluginTypeTransformer - плагин-трансформер.
+	PluginTypeTransformer PluginType = "transformer"
+)
+
 type Command struct {
-	Path        []string `json:"path"`
-	Description string   `json:"description"`
+	Path            []string `json:"path"`
+	Description     string   `json:"description"`
+	LongDescription string   `json:"longDescription,omitempty"` // Подробное описание команды (для help). Если не указано, используется info.Doc
 	// Options - описание настроек, которые плагин принимает.
 	Options []Option `json:"options"`
 }
@@ -286,6 +310,86 @@ type Option struct {
 	// Default - значение по умолчанию (может быть nil).
 	// Должно быть JSON-сериализуемым для совместимости с WASM.
 	Default any `json:"default,omitempty"`
+
+	// IsPositional - true для позиционных аргументов (не флагов).
+	// Позиционные аргументы передаются без флагов, например: `tg plugin install <package>`.
+	IsPositional bool `json:"isPositional,omitempty"`
+}
+
+// Storage определяет интерфейс хранилища для запросов и ответов плагинов.
+// Request и Response должны быть одного типа, реализующего интерфейс Storage.
+type Storage interface {
+	// Get возвращает значение поля по имени.
+	Get(name string) (value any, ok bool)
+
+	// Set устанавливает значение поля по имени.
+	Set(name string, value any) (err error)
+
+	// Has проверяет наличие поля по имени.
+	Has(name string) (has bool)
+
+	// MarshalJSON сериализует хранилище в JSON.
+	MarshalJSON() (data []byte, err error)
+
+	// UnmarshalJSON десериализует хранилище из JSON.
+	UnmarshalJSON(data []byte) (err error)
+}
+
+// MapStorage - универсальная реализация Storage на основе map[string]any.
+type MapStorage map[string]any
+
+// NewStorage создает новый экземпляр Storage.
+func NewStorage() Storage {
+	s := make(MapStorage)
+	return &s
+}
+
+// Get возвращает значение поля по имени.
+func (s MapStorage) Get(name string) (value any, ok bool) {
+	if s == nil {
+		return nil, false
+	}
+	value, ok = s[name]
+	return
+}
+
+// Set устанавливает значение поля по имени.
+func (s MapStorage) Set(name string, value any) (err error) {
+	if s == nil {
+		return errors.New("storage is nil")
+	}
+	s[name] = value
+	return nil
+}
+
+// Has проверяет наличие поля по имени.
+func (s MapStorage) Has(name string) (has bool) {
+	if s == nil {
+		return false
+	}
+	_, has = s[name]
+	return
+}
+
+// MarshalJSON сериализует хранилище в JSON.
+func (s MapStorage) MarshalJSON() (data []byte, err error) {
+	if s == nil {
+		return json.Marshal(map[string]any{})
+	}
+	return json.Marshal(map[string]any(s))
+}
+
+// UnmarshalJSON десериализует хранилище из JSON.
+func (s *MapStorage) UnmarshalJSON(data []byte) (err error) {
+	if s == nil {
+		return errors.New("storage is nil")
+	}
+	var m map[string]any
+	if err = json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+	*s = MapStorage(m)
+	return nil
 }
 
 // Plugin определяет интерфейс плагина.
@@ -294,26 +398,54 @@ type Plugin interface {
 	Info() PluginInfo
 
 	// Execute выполняет основную логику плагина.
-	// project - данные проекта (передаются по значению для WASM совместимости).
 	// rootDir - абсолютный путь к корневой директории файловой системы, доступной плагину для чтения и записи.
 	// Для обычных плагинов это обычно корень проекта (директория с go.mod).
 	// Для WASM плагинов эта директория монтируется в корень файловой системы WASI (/).
-	// options - опции выполнения плагина.
+	// request - запрос плагина, реализующий интерфейс Storage.
+	// Request - универсальный Storage (MapStorage), содержащий данные от предыдущего шага.
+	// Планировщик проверяет `Has("project")` для автоматического добавления зависимости от project-loader.
+	// response - ответ плагина, реализующий интерфейс Storage.
+	// Request и Response должны быть одного типа, что обеспечивает полную совместимость.
 	// path - путь команды, которая была вызвана (например, ["plugin", "init"]).
-	Execute(project Project, rootDir string, options map[string]any, path ...string) (err error)
+	Execute(rootDir string, request Storage, path ...string) (response Storage, err error)
 }
 
 // ExecuteRequest содержит аргументы для Execute.
 type ExecuteRequest struct {
-	Project interface{}    `json:"project"`
-	RootDir string         `json:"rootDir"`
-	Options map[string]any `json:"options"`
-	Path    []string       `json:"path,omitempty"` // путь команды, которая была вызвана
+	RootDir string   `json:"rootDir"`
+	Request Storage  `json:"request"` // Storage напрямую
+	Path    []string `json:"path,omitempty"` // путь команды, которая была вызвана
+}
+
+// UnmarshalJSON десериализует ExecuteRequest из JSON.
+// Автоматически создает MapStorage для Request.
+func (req *ExecuteRequest) UnmarshalJSON(data []byte) (err error) {
+	var aux struct {
+		RootDir string          `json:"rootDir"`
+		Request json.RawMessage `json:"request"`
+		Path    []string        `json:"path,omitempty"`
+	}
+	if err = json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	req.RootDir = aux.RootDir
+	req.Path = aux.Path
+	if len(aux.Request) > 0 {
+		storage := NewStorage()
+		if err = json.Unmarshal(aux.Request, storage); err != nil {
+			return err
+		}
+		req.Request = storage
+	} else {
+		req.Request = NewStorage()
+	}
+	return nil
 }
 
 // ExecuteResponse содержит результат выполнения Execute.
 type ExecuteResponse struct {
-	Error string `json:"error,omitempty"`
+	Error    string  `json:"error,omitempty"`
+	Response Storage `json:"response,omitempty"` // Storage напрямую
 }
 
 // CommandResponse представляет результат выполнения команды через хост.

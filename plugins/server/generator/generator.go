@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	tgpcore "tgp/core"
 	"tgp/plugins/server/core"
 	"tgp/plugins/server/renderer"
 	"tgp/plugins/server/utils"
-	"tgp/shared"
 )
 
 // DeserializeProject десериализует Project из JSON.
@@ -50,7 +50,7 @@ func GenerateServer(project *core.Project, contractID string, outDir, projectRoo
 		return fmt.Errorf("validate contract: %w", err)
 	}
 
-	logger := shared.GetLogger()
+	logger := tgpcore.GetLogger()
 	resetStats()
 	setupCacheLogger()
 	renderer.SetOnFileSaved(onFileSaved)
@@ -83,7 +83,7 @@ func GenerateTransportFiles(project *core.Project, outDir, projectRoot string, c
 		return fmt.Errorf("invalid outDir: %w", err)
 	}
 
-	logger := shared.GetLogger()
+	logger := tgpcore.GetLogger()
 	resetStats()
 	setupCacheLogger()
 	renderer.SetOnFileSaved(onFileSaved)

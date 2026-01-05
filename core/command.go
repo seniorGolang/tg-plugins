@@ -1,4 +1,4 @@
-package shared
+package core
 
 import (
 	"encoding/binary"
@@ -32,7 +32,7 @@ func WriteString(s string) (ptr uint32, length uint32) {
 		return 0, 0
 	}
 	copy(PtrToByte(ptr, uint32(len(bytes))), bytes) //nolint:gosec // Преобразование int -> uint32 безопасно, так как размеры проверяются выше
-	length = uint32(len(bytes))                     //nolint:gosec // Преобразование int -> uint32 безопасно, так как размеры проверяются выше
+	length = uint32(len(bytes)) //nolint:gosec // Преобразование int -> uint32 безопасно, так как размеры проверяются выше
 	return ptr, length
 }
 
@@ -100,3 +100,4 @@ func ExecuteCommandInDir(command string, args []string, workDir string) (respons
 	response = &resp
 	return response, nil
 }
+

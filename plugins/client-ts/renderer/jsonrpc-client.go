@@ -9,13 +9,13 @@ import (
 	"path"
 	"strings"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // renderJsonRPCClient генерирует JSON-RPC клиент для контракта
 // RenderJsonRPCClientClass генерирует JSON-RPC клиент для контракта
-func (r *ClientRenderer) RenderJsonRPCClientClass(contract *shared.Contract) (err error) {
-	logger := shared.GetLogger()
+func (r *ClientRenderer) RenderJsonRPCClientClass(contract *core.Contract) (err error) {
+	logger := core.GetLogger()
 
 	// Отладка: проверяем входные данные
 	if contract == nil {
@@ -197,11 +197,11 @@ func (r *ClientRenderer) RenderJsonRPCClientClass(contract *shared.Contract) (er
 }
 
 // renderJsonRPCClientClass генерирует класс JSON-RPC клиента
-func (r *ClientRenderer) renderJsonRPCClientClass(contract *shared.Contract) *tsg.Statement {
+func (r *ClientRenderer) renderJsonRPCClientClass(contract *core.Contract) *tsg.Statement {
 	// Сохраняем contract в локальную переменную для использования в замыкании
 	// Это гарантирует, что contract не будет изменен между установкой r.contract и использованием в замыкании
 	currentContract := contract
-	logger := shared.GetLogger()
+	logger := core.GetLogger()
 	logger.Debug(fmt.Sprintf("renderJsonRPCClientClass: contract=%s, pkgPath=%s, r.contract=%v", currentContract.Name, currentContract.PkgPath, r.contract != nil))
 
 	stmt := tsg.NewStatement()
@@ -257,7 +257,7 @@ func (r *ClientRenderer) renderJsonRPCClientClass(contract *shared.Contract) *ts
 }
 
 // renderJsonRPCMethod генерирует метод JSON-RPC клиента
-func (r *ClientRenderer) renderJsonRPCMethod(grp *tsg.Group, contract *shared.Contract, method *shared.Method) {
+func (r *ClientRenderer) renderJsonRPCMethod(grp *tsg.Group, contract *core.Contract, method *core.Method) {
 	// JSDoc комментарий
 	filteredDocs := r.filterDocsComments(method.Docs)
 	if len(filteredDocs) > 0 {
@@ -387,7 +387,7 @@ func (r *ClientRenderer) renderJsonRPCMethod(grp *tsg.Group, contract *shared.Co
 }
 
 // renderJsonRPCRequestMethod генерирует метод reqMethodName для создания RequestRPC с callback
-func (r *ClientRenderer) renderJsonRPCRequestMethod(grp *tsg.Group, contract *shared.Contract, method *shared.Method) {
+func (r *ClientRenderer) renderJsonRPCRequestMethod(grp *tsg.Group, contract *core.Contract, method *core.Method) {
 	// JSDoc комментарий
 	filteredDocs := r.filterDocsComments(method.Docs)
 	if len(filteredDocs) > 0 {
@@ -580,7 +580,7 @@ func (r *ClientRenderer) renderJsonRPCRequestMethod(grp *tsg.Group, contract *sh
 }
 
 // renderJsonRPCBatchMethod генерирует метод для выполнения батч запросов
-func (r *ClientRenderer) renderJsonRPCBatchMethod(grp *tsg.Group, contract *shared.Contract) {
+func (r *ClientRenderer) renderJsonRPCBatchMethod(grp *tsg.Group, contract *core.Contract) {
 	grp.Comment("Executes a batch of JSON-RPC requests")
 	grp.Comment("@param calls - Array of JSON-RPC calls to execute")
 
@@ -613,8 +613,8 @@ func (r *ClientRenderer) renderJsonRPCBatchMethod(grp *tsg.Group, contract *shar
 }
 
 // resultToTypeStatement создаёт тип для результата метода
-func (r *ClientRenderer) resultToTypeStatement(method *shared.Method, vars []*shared.Variable) *tsg.Statement {
-	logger := shared.GetLogger()
+func (r *ClientRenderer) resultToTypeStatement(method *core.Method, vars []*core.Variable) *tsg.Statement {
+	logger := core.GetLogger()
 
 	if len(vars) == 0 {
 		return tsg.NewStatement().Id("void")

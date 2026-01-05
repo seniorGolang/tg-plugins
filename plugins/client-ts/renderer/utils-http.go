@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"strings"
 
+	"tgp/core"
 	"tgp/plugins/client-ts/tsg"
-	"tgp/shared"
 )
 
 // isHTTP проверяет, является ли метод HTTP методом.
-func (r *ClientRenderer) isHTTP(method *shared.Method, contract *shared.Contract) bool {
+func (r *ClientRenderer) isHTTP(method *core.Method, contract *core.Contract) bool {
 	if method == nil || method.Annotations == nil {
 		return false
 	}
@@ -21,7 +21,7 @@ func (r *ClientRenderer) isHTTP(method *shared.Method, contract *shared.Contract
 }
 
 // renderHTTPMethod генерирует HTTP метод клиента
-func (r *ClientRenderer) renderHTTPMethod(grp *tsg.Group, method *shared.Method, contract *shared.Contract) {
+func (r *ClientRenderer) renderHTTPMethod(grp *tsg.Group, method *core.Method, contract *core.Contract) {
 	args := r.argsWithoutContext(method)
 	results := r.resultsWithoutError(method)
 
@@ -148,7 +148,7 @@ func (r *ClientRenderer) renderHTTPMethod(grp *tsg.Group, method *shared.Method,
 		mg.Add(headersStmt)
 		mg.Add(tsg.NewStatement().Id("headers").Dot("set").Call(tsg.NewStatement().Lit("Content-Type"), tsg.NewStatement().Lit("application/json")).Semicolon())
 		mg.Add(tsg.NewStatement().Id("headers").Dot("set").Call(tsg.NewStatement().Lit("Accept"), tsg.NewStatement().Lit("application/json")).Semicolon())
-		
+
 		// Добавляем заголовки из клиента
 		mg.Add(tsg.NewStatement().
 			ForOf("[key, value]", "Object.entries(clientHeaders)", func(fg *tsg.Group) {
@@ -227,7 +227,7 @@ func (r *ClientRenderer) renderHTTPMethod(grp *tsg.Group, method *shared.Method,
 }
 
 // httpPath возвращает путь для HTTP метода
-func (r *ClientRenderer) httpPath(method *shared.Method, contract *shared.Contract) string {
+func (r *ClientRenderer) httpPath(method *core.Method, contract *core.Contract) string {
 	// Проверяем аннотацию http-path
 	if r.contains(method.Annotations, TagHttpPath) {
 		return annotationValue(method.Annotations, TagHttpPath, "")
@@ -235,4 +235,3 @@ func (r *ClientRenderer) httpPath(method *shared.Method, contract *shared.Contra
 	// По умолчанию используем имя метода в lowerCamelCase
 	return "/" + r.lcName(method.Name)
 }
-

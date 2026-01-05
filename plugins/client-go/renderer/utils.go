@@ -11,7 +11,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 const (
@@ -93,7 +93,7 @@ func addWordBoundariesToNumbers(s string) string {
 
 // fieldTypeFromVariable конвертирует тип из Variable в код jennifer.
 // Использует информацию о массивах/map из Variable.
-func (r *ClientRenderer) fieldTypeFromVariable(ctx context.Context, variable *shared.Variable, allowEllipsis bool) *Statement {
+func (r *ClientRenderer) fieldTypeFromVariable(ctx context.Context, variable *core.Variable, allowEllipsis bool) *Statement {
 	c := &Statement{}
 
 	// Добавляем указатели
@@ -129,11 +129,11 @@ func (r *ClientRenderer) fieldTypeFromVariable(ctx context.Context, variable *sh
 						if packageName == "" {
 							packageName = filepath.Base(typ.ImportPkgPath)
 						}
-					// Если ImportAlias установлен и отличается от PkgName, используем алиас
-					if typ.ImportAlias != "" && typ.ImportAlias != packageName {
-						srcFile.ImportName(typ.ImportPkgPath, typ.ImportAlias)
-						return c.Qual(typ.ImportPkgPath, typ.TypeName)
-					}
+						// Если ImportAlias установлен и отличается от PkgName, используем алиас
+						if typ.ImportAlias != "" && typ.ImportAlias != packageName {
+							srcFile.ImportName(typ.ImportPkgPath, typ.ImportAlias)
+							return c.Qual(typ.ImportPkgPath, typ.TypeName)
+						}
 						// Иначе используем реальное имя пакета
 						srcFile.ImportName(typ.ImportPkgPath, packageName)
 						return c.Qual(typ.ImportPkgPath, typ.TypeName)
@@ -245,7 +245,7 @@ func (r *ClientRenderer) fieldType(ctx context.Context, typeID string, numberOfP
 
 	// Обрабатываем в зависимости от вида типа
 	switch typ.Kind {
-	case shared.TypeKindArray:
+	case core.TypeKindArray:
 		switch {
 		case typ.IsSlice:
 			c.Index()
@@ -259,7 +259,7 @@ func (r *ClientRenderer) fieldType(ctx context.Context, typeID string, numberOfP
 		}
 		return c
 
-	case shared.TypeKindMap:
+	case core.TypeKindMap:
 		if typ.MapKeyID != "" && typ.MapValueID != "" {
 			keyType := r.fieldType(ctx, typ.MapKeyID, 0, false)
 			valueType := r.fieldType(ctx, typ.MapValueID, 0, false)
@@ -267,7 +267,7 @@ func (r *ClientRenderer) fieldType(ctx context.Context, typeID string, numberOfP
 		}
 		return c
 
-	case shared.TypeKindChan:
+	case core.TypeKindChan:
 		chanType := c
 		switch typ.ChanDirection {
 		case 1: // send only
@@ -282,19 +282,19 @@ func (r *ClientRenderer) fieldType(ctx context.Context, typeID string, numberOfP
 		}
 		return chanType
 
-	case shared.TypeKindStruct:
+	case core.TypeKindStruct:
 		// ВАЖНО: все типы из текущего проекта должны генерироваться локально и использоваться из dto пакета
 		if typ.ImportPkgPath != "" && typ.TypeName != "" {
 			// Проверяем, является ли тип из текущего проекта
 			if r.isTypeFromCurrentProject(typ.ImportPkgPath) {
 				// Тип из текущего проекта - используем dto пакет
-					if srcFile, ok := ctx.Value(keyCode).(GoFile); ok {
-						dtoPkgPath := fmt.Sprintf("%s/dto", r.pkgPath(r.outDir))
-						srcFile.ImportName(dtoPkgPath, "dto")
-						return c.Qual(dtoPkgPath, typ.TypeName)
-					}
-					return c.Id(typ.TypeName)
+				if srcFile, ok := ctx.Value(keyCode).(GoFile); ok {
+					dtoPkgPath := fmt.Sprintf("%s/dto", r.pkgPath(r.outDir))
+					srcFile.ImportName(dtoPkgPath, "dto")
+					return c.Qual(dtoPkgPath, typ.TypeName)
 				}
+				return c.Id(typ.TypeName)
+			}
 			// Тип из внешнего пакета - импортируем как обычно
 			if srcFile, ok := ctx.Value(keyCode).(GoFile); ok {
 				// Используем PkgName (реальное имя пакета) для ImportName
@@ -315,19 +315,19 @@ func (r *ClientRenderer) fieldType(ctx context.Context, typeID string, numberOfP
 		}
 		return c.Id(typ.TypeName)
 
-	case shared.TypeKindInterface:
+	case core.TypeKindInterface:
 		// ВАЖНО: все типы из текущего проекта должны генерироваться локально и использоваться из dto пакета
 		if typ.ImportPkgPath != "" && typ.TypeName != "" {
 			// Проверяем, является ли тип из текущего проекта
 			if r.isTypeFromCurrentProject(typ.ImportPkgPath) {
 				// Тип из текущего проекта - используем dto пакет
-					if srcFile, ok := ctx.Value(keyCode).(GoFile); ok {
-						dtoPkgPath := fmt.Sprintf("%s/dto", r.pkgPath(r.outDir))
-						srcFile.ImportName(dtoPkgPath, "dto")
-						return c.Qual(dtoPkgPath, typ.TypeName)
-					}
-					return c.Id(typ.TypeName)
+				if srcFile, ok := ctx.Value(keyCode).(GoFile); ok {
+					dtoPkgPath := fmt.Sprintf("%s/dto", r.pkgPath(r.outDir))
+					srcFile.ImportName(dtoPkgPath, "dto")
+					return c.Qual(dtoPkgPath, typ.TypeName)
 				}
+				return c.Id(typ.TypeName)
+			}
 			// Тип из внешнего пакета - импортируем как обычно
 			if srcFile, ok := ctx.Value(keyCode).(GoFile); ok {
 				// Используем PkgName (реальное имя пакета) для ImportName
@@ -348,7 +348,7 @@ func (r *ClientRenderer) fieldType(ctx context.Context, typeID string, numberOfP
 		}
 		return c.Id(typ.TypeName)
 
-	case shared.TypeKindFunction:
+	case core.TypeKindFunction:
 		args := make([]Code, 0, len(typ.FunctionArgs))
 		for _, arg := range typ.FunctionArgs {
 			argType := r.fieldTypeFromVariable(ctx, arg, false)
@@ -362,7 +362,7 @@ func (r *ClientRenderer) fieldType(ctx context.Context, typeID string, numberOfP
 		return c.Func().Params(args...).Params(results...)
 
 	// Базовые типы Go (string, int, int64, и т.д.)
-	case shared.TypeKindAlias:
+	case core.TypeKindAlias:
 		// Алиас - получаем базовый тип через AliasOf
 		if typ.AliasOf != "" {
 			return r.fieldType(ctx, typ.AliasOf, numberOfPointers, allowEllipsis)
@@ -370,23 +370,23 @@ func (r *ClientRenderer) fieldType(ctx context.Context, typeID string, numberOfP
 		// Если AliasOf пустой, fallback на базовый тип
 		return c.Id(typeID)
 
-	case shared.TypeKindString, shared.TypeKindInt, shared.TypeKindInt8, shared.TypeKindInt16,
-		shared.TypeKindInt32, shared.TypeKindInt64, shared.TypeKindUint, shared.TypeKindUint8,
-		shared.TypeKindUint16, shared.TypeKindUint32, shared.TypeKindUint64,
-		shared.TypeKindFloat32, shared.TypeKindFloat64, shared.TypeKindBool,
-		shared.TypeKindByte, shared.TypeKindRune, shared.TypeKindError, shared.TypeKindAny:
+	case core.TypeKindString, core.TypeKindInt, core.TypeKindInt8, core.TypeKindInt16,
+		core.TypeKindInt32, core.TypeKindInt64, core.TypeKindUint, core.TypeKindUint8,
+		core.TypeKindUint16, core.TypeKindUint32, core.TypeKindUint64,
+		core.TypeKindFloat32, core.TypeKindFloat64, core.TypeKindBool,
+		core.TypeKindByte, core.TypeKindRune, core.TypeKindError, core.TypeKindAny:
 		// ВАЖНО: все типы из текущего проекта должны генерироваться локально и использоваться из dto пакета
 		// Если у типа есть ImportPkgPath и TypeName, это именованный тип (например, UserID int64, Email string)
 		if typ.ImportPkgPath != "" && typ.TypeName != "" {
 			// Проверяем, является ли тип из текущего проекта
 			if r.isTypeFromCurrentProject(typ.ImportPkgPath) {
 				// Тип из текущего проекта - используем dto пакет
-					if srcFile, ok := ctx.Value(keyCode).(GoFile); ok {
-						dtoPkgPath := fmt.Sprintf("%s/dto", r.pkgPath(r.outDir))
-						srcFile.ImportName(dtoPkgPath, "dto")
-						return c.Qual(dtoPkgPath, typ.TypeName)
-					}
-					return c.Id(typ.TypeName)
+				if srcFile, ok := ctx.Value(keyCode).(GoFile); ok {
+					dtoPkgPath := fmt.Sprintf("%s/dto", r.pkgPath(r.outDir))
+					srcFile.ImportName(dtoPkgPath, "dto")
+					return c.Qual(dtoPkgPath, typ.TypeName)
+				}
+				return c.Id(typ.TypeName)
 			}
 			// Тип не был собран - это стандартная библиотека или внешний пакет, импортируем
 			if srcFile, ok := ctx.Value(keyCode).(GoFile); ok {
@@ -411,7 +411,7 @@ func (r *ClientRenderer) fieldType(ctx context.Context, typeID string, numberOfP
 	}
 }
 
-func (r *ClientRenderer) funcDefinitionParams(ctx context.Context, vars []*shared.Variable) *Statement {
+func (r *ClientRenderer) funcDefinitionParams(ctx context.Context, vars []*core.Variable) *Statement {
 	c := &Statement{}
 	c.ListFunc(func(gr *Group) {
 		for _, v := range vars {
@@ -429,7 +429,7 @@ func (r *ClientRenderer) funcDefinitionParams(ctx context.Context, vars []*share
 }
 
 // isContextFirst проверяет, является ли первый аргумент context.Context.
-func (r *ClientRenderer) isContextFirst(vars []*shared.Variable) bool {
+func (r *ClientRenderer) isContextFirst(vars []*core.Variable) bool {
 
 	if len(vars) == 0 {
 		return false
@@ -439,11 +439,11 @@ func (r *ClientRenderer) isContextFirst(vars []*shared.Variable) bool {
 		// Проверяем по typeID - если это "context:Context", то это context.Context
 		return vars[0].TypeID == "context:Context"
 	}
-	return typ.Kind == shared.TypeKindInterface && typ.ImportPkgPath == "context" && typ.TypeName == "Context"
+	return typ.Kind == core.TypeKindInterface && typ.ImportPkgPath == "context" && typ.TypeName == "Context"
 }
 
 // isErrorLast проверяет, является ли последний результат error.
-func (r *ClientRenderer) isErrorLast(vars []*shared.Variable) bool {
+func (r *ClientRenderer) isErrorLast(vars []*core.Variable) bool {
 
 	if len(vars) == 0 {
 		return false
@@ -453,7 +453,7 @@ func (r *ClientRenderer) isErrorLast(vars []*shared.Variable) bool {
 }
 
 // argsWithoutContext возвращает аргументы без первого context.Context, если он есть.
-func (r *ClientRenderer) argsWithoutContext(method *shared.Method) []*shared.Variable {
+func (r *ClientRenderer) argsWithoutContext(method *core.Method) []*core.Variable {
 
 	if r.isContextFirst(method.Args) {
 		return method.Args[1:]
@@ -462,7 +462,7 @@ func (r *ClientRenderer) argsWithoutContext(method *shared.Method) []*shared.Var
 }
 
 // resultsWithoutError возвращает результаты без последнего error, если он есть.
-func (r *ClientRenderer) resultsWithoutError(method *shared.Method) []*shared.Variable {
+func (r *ClientRenderer) resultsWithoutError(method *core.Method) []*core.Variable {
 
 	if r.isErrorLast(method.Results) {
 		return method.Results[:len(method.Results)-1]
@@ -471,13 +471,13 @@ func (r *ClientRenderer) resultsWithoutError(method *shared.Method) []*shared.Va
 }
 
 // requestStructName возвращает имя структуры request для метода.
-func (r *ClientRenderer) requestStructName(contract *shared.Contract, method *shared.Method) string {
+func (r *ClientRenderer) requestStructName(contract *core.Contract, method *core.Method) string {
 
 	return "request" + contract.Name + method.Name
 }
 
 // responseStructName возвращает имя структуры response для метода.
-func (r *ClientRenderer) responseStructName(contract *shared.Contract, method *shared.Method) string {
+func (r *ClientRenderer) responseStructName(contract *core.Contract, method *core.Method) string {
 
 	return "response" + contract.Name + method.Name
 }
@@ -500,7 +500,7 @@ func (r *ClientRenderer) contractKeys() []string {
 }
 
 // methodIsJsonRPC проверяет, является ли метод JSON-RPC методом.
-func (r *ClientRenderer) methodIsJsonRPC(contract *shared.Contract, method *shared.Method) bool {
+func (r *ClientRenderer) methodIsJsonRPC(contract *core.Contract, method *core.Method) bool {
 	if method == nil || method.Annotations == nil {
 		return false
 	}
@@ -509,7 +509,7 @@ func (r *ClientRenderer) methodIsJsonRPC(contract *shared.Contract, method *shar
 }
 
 // methodIsHTTP проверяет, является ли метод HTTP методом.
-func (r *ClientRenderer) methodIsHTTP(method *shared.Method) bool {
+func (r *ClientRenderer) methodIsHTTP(method *core.Method) bool {
 	if method == nil || method.Annotations == nil {
 		return false
 	}
@@ -556,7 +556,7 @@ func (r *ClientRenderer) parseTagsFromDocs(docs string) map[string]string {
 }
 
 // generateExampleValueFromVariable генерирует пример значения для переменной
-func (r *ClientRenderer) generateExampleValueFromVariable(variable *shared.Variable, docs, pkgPath string) string {
+func (r *ClientRenderer) generateExampleValueFromVariable(variable *core.Variable, docs, pkgPath string) string {
 	// Обрабатываем массивы и слайсы
 	if variable.IsSlice || variable.ArrayLen > 0 {
 		elemType := r.goTypeString(variable.TypeID, pkgPath)
@@ -610,19 +610,19 @@ type exchangeField struct {
 }
 
 // fieldsArgument возвращает поля для аргументов метода.
-func (r *ClientRenderer) fieldsArgument(method *shared.Method) []exchangeField {
+func (r *ClientRenderer) fieldsArgument(method *core.Method) []exchangeField {
 	vars := r.argsWithoutContext(method)
 	return r.varsToFields(vars, method.Annotations)
 }
 
 // fieldsResult возвращает поля для результатов метода.
-func (r *ClientRenderer) fieldsResult(method *shared.Method) []exchangeField {
+func (r *ClientRenderer) fieldsResult(method *core.Method) []exchangeField {
 	vars := r.resultsWithoutError(method)
 	return r.varsToFields(vars, method.Annotations)
 }
 
 // varsToFields конвертирует переменные в поля для обмена данными.
-func (r *ClientRenderer) varsToFields(vars []*shared.Variable, methodTags map[string]string) []exchangeField {
+func (r *ClientRenderer) varsToFields(vars []*core.Variable, methodTags map[string]string) []exchangeField {
 	fields := make([]exchangeField, 0, len(vars))
 	for _, v := range vars {
 		field := exchangeField{

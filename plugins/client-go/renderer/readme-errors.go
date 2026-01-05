@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tgp/core"
 	"tgp/internal/markdown"
-	"tgp/shared"
 )
 
 // renderBatchSection генерирует секцию Batch запросов для JSON-RPC
-func (r *ClientRenderer) renderBatchSection(md *markdown.Markdown, contracts []*shared.Contract, outDir string) {
+func (r *ClientRenderer) renderBatchSection(md *markdown.Markdown, contracts []*core.Contract, outDir string) {
 	batchAnchor := generateAnchor("Batch запросы (JSON-RPC)")
 	md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", batchAnchor))
 	md.LF()
@@ -45,7 +45,7 @@ func (r *ClientRenderer) renderErrorsSection(md *markdown.Markdown) {
 	if pkgName == "" || pkgName == "." {
 		pkgName = "client"
 	}
-	
+
 	md.CodeBlocks(markdown.SyntaxHighlightGo, fmt.Sprintf(`package main
 
 import (
@@ -108,11 +108,11 @@ func main() {
 }
 
 // renderBatchExample генерирует пример использования batch запросов
-func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*shared.Contract, outDir string) {
+func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*core.Contract, outDir string) {
 	// Находим первые два JSON-RPC метода из разных контрактов для примера
 	var exampleMethods []struct {
-		contract *shared.Contract
-		method   *shared.Method
+		contract *core.Contract
+		method   *core.Method
 	}
 
 	for _, contract := range contracts {
@@ -122,8 +122,8 @@ func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*
 		for _, method := range contract.Methods {
 			if r.methodIsJsonRPC(contract, method) {
 				exampleMethods = append(exampleMethods, struct {
-					contract *shared.Contract
-					method   *shared.Method
+					contract *core.Contract
+					method   *core.Method
 				}{contract: contract, method: method})
 				if len(exampleMethods) >= 2 {
 					break
@@ -141,7 +141,7 @@ func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*
 	if pkgName == "" || pkgName == "." {
 		pkgName = "client"
 	}
-	
+
 	if len(exampleMethods) == 0 {
 		return
 	}
@@ -202,17 +202,17 @@ func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*
 		callbackInfo.Name = callbackName
 		callbackInfo.ContractName = em.contract.Name
 		callbackInfo.MethodName = em.method.Name
-		
+
 		// Проверяем, есть ли error в конце результатов
 		callbackInfo.HasError = r.isErrorLast(em.method.Results)
-		
+
 		// Формируем список результатов: сначала все результаты без error, потом error (если есть)
 		allResults := em.method.Results
 		callbackInfo.Results = make([]struct {
 			Name string
 			Type string
 		}, 0, len(allResults))
-		
+
 		// Сначала добавляем все результаты без error
 		for j, result := range resultsWithoutErr {
 			var resultName string
@@ -226,7 +226,7 @@ func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*
 					resultName = fmt.Sprintf("result%d_%d", i+1, j+1)
 				}
 			}
-			
+
 			resultTypeStr := r.goTypeStringFromVariable(result, em.contract.PkgPath)
 			callbackInfo.Results = append(callbackInfo.Results, struct {
 				Name string
@@ -235,7 +235,7 @@ func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*
 				Name: resultName,
 				Type: resultTypeStr,
 			})
-			
+
 			// Проверяем, нужен ли импорт dto (тип из текущего проекта)
 			if !callbackInfo.NeedsDto {
 				if typ, ok := r.project.Types[result.TypeID]; ok && typ.ImportPkgPath != "" {
@@ -245,7 +245,7 @@ func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*
 				}
 			}
 		}
-		
+
 		// Затем добавляем error в конце (если есть)
 		if callbackInfo.HasError && len(allResults) > 0 {
 			lastResult := allResults[len(allResults)-1]
@@ -258,7 +258,7 @@ func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*
 				Type: resultTypeStr,
 			})
 		}
-		
+
 		if len(resultsWithoutErr) > 0 {
 			callbackInfo.HasResult = true
 			// Используем имя первого результата из Results, если оно есть
@@ -269,7 +269,7 @@ func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*
 			}
 			callbackInfo.ResultType = r.goTypeStringFromVariable(resultsWithoutErr[0], em.contract.PkgPath)
 		}
-		
+
 		callbacks = append(callbacks, callbackInfo)
 
 		// Подготавливаем параметры для запроса
@@ -316,4 +316,3 @@ func (r *ClientRenderer) renderBatchExample(md *markdown.Markdown, contracts []*
 	}
 	md.CodeBlocks(markdown.SyntaxHighlightGo, batchExample)
 }
-

@@ -9,11 +9,11 @@ import (
 
 	"tgp/internal/markdown"
 
-	"tgp/shared"
+	"tgp/core"
 )
 
 // renderMethodDoc генерирует документацию для JSON-RPC метода
-func (r *ClientRenderer) renderMethodDoc(md *markdown.Markdown, method *shared.Method, contract *shared.Contract, outDir string, typeUsages map[string]*typeUsage) {
+func (r *ClientRenderer) renderMethodDoc(md *markdown.Markdown, method *core.Method, contract *core.Contract, outDir string, typeUsages map[string]*typeUsage) {
 	methodAnchor := generateAnchor(method.Name)
 	md.PlainText(fmt.Sprintf("<a id=\"%s\"></a>", methodAnchor))
 	md.LF()
@@ -55,7 +55,7 @@ func (r *ClientRenderer) renderMethodDoc(md *markdown.Markdown, method *shared.M
 }
 
 // renderHTTPMethodDoc генерирует документацию для HTTP метода
-func (r *ClientRenderer) renderHTTPMethodDoc(md *markdown.Markdown, method *shared.Method, contract *shared.Contract, outDir string, typeUsages map[string]*typeUsage) {
+func (r *ClientRenderer) renderHTTPMethodDoc(md *markdown.Markdown, method *core.Method, contract *core.Contract, outDir string, typeUsages map[string]*typeUsage) {
 	httpMethod := method.Annotations[TagMethodHTTP]
 	if httpMethod == "" {
 		httpMethod = "GET"
@@ -104,7 +104,7 @@ func (r *ClientRenderer) renderHTTPMethodDoc(md *markdown.Markdown, method *shar
 }
 
 // renderMethodSignature генерирует сигнатуру метода в блоке кода
-func (r *ClientRenderer) renderMethodSignature(md *markdown.Markdown, method *shared.Method, contract *shared.Contract, outDir string, isHTTP bool) {
+func (r *ClientRenderer) renderMethodSignature(md *markdown.Markdown, method *core.Method, contract *core.Contract, outDir string, isHTTP bool) {
 	md.PlainText(markdown.Bold("Сигнатура:"))
 	md.LF()
 
@@ -154,7 +154,7 @@ func (r *ClientRenderer) renderMethodSignature(md *markdown.Markdown, method *sh
 }
 
 // renderMethodParamsAndResults генерирует таблицы параметров и возвращаемых значений
-func (r *ClientRenderer) renderMethodParamsAndResults(md *markdown.Markdown, method *shared.Method, contract *shared.Contract, typeUsages map[string]*typeUsage) {
+func (r *ClientRenderer) renderMethodParamsAndResults(md *markdown.Markdown, method *core.Method, contract *core.Contract, typeUsages map[string]*typeUsage) {
 	args := r.argsWithoutContext(method)
 	results := r.resultsWithoutError(method)
 
@@ -235,7 +235,7 @@ func (r *ClientRenderer) renderMethodParamsAndResults(md *markdown.Markdown, met
 }
 
 // renderMethodErrors генерирует описание возможных ошибок метода
-func (r *ClientRenderer) renderMethodErrors(md *markdown.Markdown, method *shared.Method, contract *shared.Contract) {
+func (r *ClientRenderer) renderMethodErrors(md *markdown.Markdown, method *core.Method, contract *core.Contract) {
 	// Используем информацию об ошибках из метода
 	if len(method.Errors) == 0 {
 		return
@@ -246,7 +246,7 @@ func (r *ClientRenderer) renderMethodErrors(md *markdown.Markdown, method *share
 	md.LF()
 
 	// Сортируем ошибки по HTTP коду для детерминированного порядка
-	errors := make([]*shared.ErrorInfo, len(method.Errors))
+	errors := make([]*core.ErrorInfo, len(method.Errors))
 	copy(errors, method.Errors)
 	sort.Slice(errors, func(i, j int) bool {
 		// Сначала ошибки с HTTP кодом, затем без
