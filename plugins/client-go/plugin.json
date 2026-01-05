@@ -1,6 +1,6 @@
 {
   "name": "clientGo",
-  "version": "1.0.0",
+  "version": "2.4.0",
   "description": "Плагин client-go",
   "author": "Rick Sanchez <rick.sanchez@example.com>",
   "license": "MIT"
