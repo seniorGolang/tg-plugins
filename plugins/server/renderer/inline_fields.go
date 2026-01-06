@@ -6,14 +6,14 @@ import (
 	"slices"
 	"strings"
 
-	"tgp/plugins/server/core"
-	"tgp/plugins/server/tags"
+	"tgp/internal/parser"
+	"tgp/internal/tags"
 )
 
 // expandInlineFields разворачивает inline поля в списке переменных.
-func (r *contractRenderer) expandInlineFields(vars []*core.Variable, methodTags tags.DocTags) []*core.Variable {
+func (r *contractRenderer) expandInlineFields(vars []*parser.Variable, methodTags tags.DocTags) []*parser.Variable {
 
-	result := make([]*core.Variable, 0, len(vars))
+	result := make([]*parser.Variable, 0, len(vars))
 	for _, v := range vars {
 		// Проверяем, является ли поле inline через аннотации метода
 		if r.isInlineField(v, methodTags) {
@@ -28,7 +28,7 @@ func (r *contractRenderer) expandInlineFields(vars []*core.Variable, methodTags 
 }
 
 // isInlineField проверяет, является ли поле inline.
-func (r *contractRenderer) isInlineField(v *core.Variable, methodTags tags.DocTags) bool {
+func (r *contractRenderer) isInlineField(v *parser.Variable, methodTags tags.DocTags) bool {
 
 	// Проверяем теги в аннотациях метода
 	for key, value := range methodTags.Sub(v.Name) {
@@ -52,33 +52,33 @@ func (r *contractRenderer) isInlineField(v *core.Variable, methodTags tags.DocTa
 }
 
 // expandInlineStruct разворачивает inline структуру в список полей.
-func (r *contractRenderer) expandInlineStruct(v *core.Variable) []*core.Variable {
+func (r *contractRenderer) expandInlineStruct(v *parser.Variable) []*parser.Variable {
 
 	// Получаем тип из project.Types
 	typ, ok := r.project.Types[v.TypeID]
 	if !ok {
 		// Тип не найден, возвращаем как есть
-		return []*core.Variable{v}
+		return []*parser.Variable{v}
 	}
 
 	// Проверяем, что это структура
-	if typ.Kind != core.TypeKindStruct {
-		return []*core.Variable{v}
+	if typ.Kind != parser.TypeKindStruct {
+		return []*parser.Variable{v}
 	}
 
 	// Если это алиас структуры, получаем базовый тип
-	if typ.Kind == core.TypeKindAlias && typ.AliasOf != "" {
+	if typ.Kind == parser.TypeKindAlias && typ.AliasOf != "" {
 		baseTyp, ok := r.project.Types[typ.AliasOf]
-		if ok && baseTyp.Kind == core.TypeKindStruct {
+		if ok && baseTyp.Kind == parser.TypeKindStruct {
 			typ = baseTyp
 		}
 	}
 
 	// Разворачиваем поля структуры
-	result := make([]*core.Variable, 0)
+	result := make([]*parser.Variable, 0)
 	for _, field := range typ.StructFields {
 		// Проверяем, является ли само поле inline (вложенные inline)
-		fieldVar := &core.Variable{
+		fieldVar := &parser.Variable{
 			Name:             field.Name,
 			TypeID:           field.TypeID,
 			NumberOfPointers: field.NumberOfPointers,
@@ -113,7 +113,7 @@ func (r *contractRenderer) expandInlineStruct(v *core.Variable) []*core.Variable
 }
 
 // ArgsFieldsWithoutContext возвращает аргументы без context, обрабатывая inline поля.
-func (r *contractRenderer) ArgsFieldsWithoutContext(method *core.Method) []*core.Variable {
+func (r *contractRenderer) ArgsFieldsWithoutContext(method *parser.Method) []*parser.Variable {
 
 	argVars := r.expandInlineFields(method.Args, method.Annotations)
 	// Убираем context, если он первый
@@ -124,7 +124,7 @@ func (r *contractRenderer) ArgsFieldsWithoutContext(method *core.Method) []*core
 }
 
 // ResultFieldsWithoutError возвращает результаты без error, обрабатывая inline поля.
-func (r *contractRenderer) ResultFieldsWithoutError(method *core.Method) []*core.Variable {
+func (r *contractRenderer) ResultFieldsWithoutError(method *parser.Method) []*parser.Variable {
 
 	resultVars := r.expandInlineFields(method.Results, method.Annotations)
 	// Убираем error, если он последний

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"tgp/internal/common"
 )
 
 const (
@@ -196,15 +198,7 @@ func (tags DocTags) ValueBool(tagName string, defValue ...bool) (value bool) {
 }
 
 func (tags DocTags) ToKeys(tagName, separator string, defValue ...string) map[string]int {
-	values := strings.Split(tags.Value(tagName, defValue...), separator)
-	result := make(map[string]int)
-	for i, v := range values {
-		v = strings.TrimSpace(v)
-		if v != "" {
-			result[v] = i
-		}
-	}
-	return result
+	return common.SliceStringToMap(strings.Split(tags.Value(tagName, defValue...), separator))
 }
 
 func (tags DocTags) ToMap(tagName, separator, splitter string, defValue ...string) (m map[string]string) {

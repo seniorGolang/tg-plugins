@@ -8,12 +8,12 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 	"tgp/plugins/server/renderer/types"
 )
 
 // varHeaderMap возвращает маппинг переменных на HTTP заголовки.
-func (r *contractRenderer) varHeaderMap(method *core.Method) map[string]string {
+func (r *contractRenderer) varHeaderMap(method *parser.Method) map[string]string {
 
 	headers := make(map[string]string)
 	if httpHeaders := method.Annotations.Value(TagHttpHeader, ""); httpHeaders != "" {
@@ -30,7 +30,7 @@ func (r *contractRenderer) varHeaderMap(method *core.Method) map[string]string {
 }
 
 // varCookieMap возвращает маппинг переменных на HTTP cookies.
-func (r *contractRenderer) varCookieMap(method *core.Method) map[string]string {
+func (r *contractRenderer) varCookieMap(method *parser.Method) map[string]string {
 
 	cookies := make(map[string]string)
 	if httpCookies := method.Annotations.Value(TagHttpCookies, ""); httpCookies != "" {
@@ -47,7 +47,7 @@ func (r *contractRenderer) varCookieMap(method *core.Method) map[string]string {
 }
 
 // argPathMap возвращает маппинг аргументов на path параметры.
-func (r *contractRenderer) argPathMap(method *core.Method) map[string]string {
+func (r *contractRenderer) argPathMap(method *parser.Method) map[string]string {
 
 	paths := make(map[string]string)
 	if urlPath := method.Annotations.Value(TagHttpPath, ""); urlPath != "" {
@@ -63,7 +63,7 @@ func (r *contractRenderer) argPathMap(method *core.Method) map[string]string {
 }
 
 // argParamMap возвращает маппинг аргументов на query параметры.
-func (r *contractRenderer) argParamMap(method *core.Method) map[string]string {
+func (r *contractRenderer) argParamMap(method *parser.Method) map[string]string {
 
 	params := make(map[string]string)
 	if urlArgs := method.Annotations.Value(TagHttpArg, ""); urlArgs != "" {
@@ -80,7 +80,7 @@ func (r *contractRenderer) argParamMap(method *core.Method) map[string]string {
 }
 
 // argByName находит аргумент по имени.
-func (r *contractRenderer) argByName(method *core.Method, argName string) *core.Variable {
+func (r *contractRenderer) argByName(method *parser.Method, argName string) *parser.Variable {
 
 	argName = strings.TrimPrefix(argName, "!")
 	for _, arg := range method.Args {
@@ -92,7 +92,7 @@ func (r *contractRenderer) argByName(method *core.Method, argName string) *core.
 }
 
 // resultByName находит результат по имени.
-func (r *contractRenderer) resultByName(method *core.Method, retName string) *core.Variable {
+func (r *contractRenderer) resultByName(method *parser.Method, retName string) *parser.Variable {
 
 	for _, ret := range method.Results {
 		if ret.Name == retName {
@@ -103,7 +103,7 @@ func (r *contractRenderer) resultByName(method *core.Method, retName string) *co
 }
 
 // retCookieMap возвращает маппинг результатов на cookies.
-func (r *contractRenderer) retCookieMap(method *core.Method) map[string]string {
+func (r *contractRenderer) retCookieMap(method *parser.Method) map[string]string {
 
 	cookies := make(map[string]string)
 	cookieMap := r.varCookieMap(method)
@@ -116,9 +116,9 @@ func (r *contractRenderer) retCookieMap(method *core.Method) map[string]string {
 }
 
 // argsWithoutSpecialArgs возвращает аргументы без path, query, header, cookie параметров.
-func (r *contractRenderer) argsWithoutSpecialArgs(method *core.Method) []*core.Variable {
+func (r *contractRenderer) argsWithoutSpecialArgs(method *parser.Method) []*parser.Variable {
 
-	vars := make([]*core.Variable, 0)
+	vars := make([]*parser.Variable, 0)
 	argsAll := argsWithoutContext(method)
 	pathMap := r.argPathMap(method)
 	paramMap := r.argParamMap(method)
@@ -152,7 +152,7 @@ func isBuiltinTypeID(typeID string) bool {
 }
 
 // argFromString генерирует код для извлечения аргумента из строки (path, query, header, cookie).
-func (r *contractRenderer) argFromString(srcFile *GoFile, typeGen *types.Generator, method *core.Method, typeName string, varMap map[string]string, srcCode func(srcName string) Code, errStatement func(arg, header string) *Statement) *Statement {
+func (r *contractRenderer) argFromString(srcFile *GoFile, typeGen *types.Generator, method *parser.Method, typeName string, varMap map[string]string, srcCode func(srcName string) Code, errStatement func(arg, header string) *Statement) *Statement {
 
 	block := Line()
 	if len(varMap) != 0 {
@@ -169,7 +169,7 @@ func (r *contractRenderer) argFromString(srcFile *GoFile, typeGen *types.Generat
 
 			// Определяем тип для генерации кода, используя данные из core напрямую
 			var argTypeName string
-			var typ *core.Type
+			var typ *parser.Type
 			var fieldTypeID string
 			var fieldIsSlice bool
 			var fieldElementPointers int
@@ -184,13 +184,13 @@ func (r *contractRenderer) argFromString(srcFile *GoFile, typeGen *types.Generat
 				if !ok {
 					continue
 				}
-				if argType.Kind == core.TypeKindAlias && argType.AliasOf != "" {
+				if argType.Kind == parser.TypeKindAlias && argType.AliasOf != "" {
 					if baseType, ok := r.project.Types[argType.AliasOf]; ok {
 						argType = baseType
 					}
 				}
 				currentType := argType
-				var field *core.StructField
+				var field *parser.StructField
 				for i := 1; i < len(argTokens); i++ {
 					for _, f := range currentType.StructFields {
 						if f.Name == argTokens[i] {
@@ -208,7 +208,7 @@ func (r *contractRenderer) argFromString(srcFile *GoFile, typeGen *types.Generat
 							field = nil
 							break
 						}
-						if nextType.Kind == core.TypeKindAlias && nextType.AliasOf != "" {
+						if nextType.Kind == parser.TypeKindAlias && nextType.AliasOf != "" {
 							if baseType, ok := r.project.Types[nextType.AliasOf]; ok {
 								currentType = baseType
 							} else {
@@ -297,7 +297,7 @@ func (r *contractRenderer) argFromString(srcFile *GoFile, typeGen *types.Generat
 					}
 
 					// Конвертируем строку в нужный тип, создавая временный Variable из данных поля
-					fieldVar := &core.Variable{
+					fieldVar := &parser.Variable{
 						TypeID:           fieldTypeID,
 						IsSlice:          fieldIsSlice,
 						ElementPointers:  fieldElementPointers,
@@ -325,7 +325,7 @@ func (r *contractRenderer) argFromString(srcFile *GoFile, typeGen *types.Generat
 }
 
 // argFromStringOrdered генерирует код для извлечения аргументов из строки с сохранением порядка.
-func (r *contractRenderer) argFromStringOrdered(srcFile *GoFile, typeGen *types.Generator, method *core.Method, typeName string, varMap map[string]string, orderedArgs []string, srcCode func(srcName string) Code, errStatement func(arg, header string) *Statement) *Statement {
+func (r *contractRenderer) argFromStringOrdered(srcFile *GoFile, typeGen *types.Generator, method *parser.Method, typeName string, varMap map[string]string, orderedArgs []string, srcCode func(srcName string) Code, errStatement func(arg, header string) *Statement) *Statement {
 
 	block := Line()
 	if len(varMap) != 0 {
@@ -356,7 +356,7 @@ func (r *contractRenderer) argFromStringOrdered(srcFile *GoFile, typeGen *types.
 
 			// Определяем тип для генерации кода, используя данные из core напрямую
 			var argTypeName string
-			var typ *core.Type
+			var typ *parser.Type
 			var fieldTypeID string
 			var fieldIsSlice bool
 			var fieldElementPointers int
@@ -371,13 +371,13 @@ func (r *contractRenderer) argFromStringOrdered(srcFile *GoFile, typeGen *types.
 				if !ok {
 					continue
 				}
-				if argType.Kind == core.TypeKindAlias && argType.AliasOf != "" {
+				if argType.Kind == parser.TypeKindAlias && argType.AliasOf != "" {
 					if baseType, ok := r.project.Types[argType.AliasOf]; ok {
 						argType = baseType
 					}
 				}
 				currentType := argType
-				var field *core.StructField
+				var field *parser.StructField
 				for i := 1; i < len(argTokens); i++ {
 					for _, f := range currentType.StructFields {
 						if f.Name == argTokens[i] {
@@ -395,7 +395,7 @@ func (r *contractRenderer) argFromStringOrdered(srcFile *GoFile, typeGen *types.
 							field = nil
 							break
 						}
-						if nextType.Kind == core.TypeKindAlias && nextType.AliasOf != "" {
+						if nextType.Kind == parser.TypeKindAlias && nextType.AliasOf != "" {
 							if baseType, ok := r.project.Types[nextType.AliasOf]; ok {
 								currentType = baseType
 							} else {
@@ -484,7 +484,7 @@ func (r *contractRenderer) argFromStringOrdered(srcFile *GoFile, typeGen *types.
 					}
 
 					// Конвертируем строку в нужный тип, создавая временный Variable из данных поля
-					fieldVar := &core.Variable{
+					fieldVar := &parser.Variable{
 						TypeID:           fieldTypeID,
 						IsSlice:          fieldIsSlice,
 						ElementPointers:  fieldElementPointers,
@@ -512,7 +512,7 @@ func (r *contractRenderer) argFromStringOrdered(srcFile *GoFile, typeGen *types.
 }
 
 // argToTypeConverter генерирует код для конвертации строки в нужный тип.
-func (r *contractRenderer) argToTypeConverter(srcFile *GoFile, typeGen *types.Generator, from *Statement, arg *core.Variable, id *Statement, errStatement *Statement) *Statement {
+func (r *contractRenderer) argToTypeConverter(srcFile *GoFile, typeGen *types.Generator, from *Statement, arg *parser.Variable, id *Statement, errStatement *Statement) *Statement {
 
 	op := "="
 
@@ -522,7 +522,7 @@ func (r *contractRenderer) argToTypeConverter(srcFile *GoFile, typeGen *types.Ge
 		// TypeID уже содержит тип элемента без префикса []
 		elementTypeID := arg.TypeID
 		// Создаем переменную для элемента
-		elementVar := &core.Variable{
+		elementVar := &parser.Variable{
 			Name:             "elem",
 			TypeID:           elementTypeID,
 			NumberOfPointers: arg.ElementPointers,
@@ -585,8 +585,8 @@ func (r *contractRenderer) argToTypeConverter(srcFile *GoFile, typeGen *types.Ge
 		return id.Op(op).Add(from)
 	}
 
-	// Используем централизованную логику из core для определения формата сериализации
-	openAPIType, format := core.GetSerializationFormat(typ, r.project)
+	// Определяем формат сериализации на основе типа
+	openAPIType, format := getSerializationFormat(typ, r.project)
 
 	// Определяем, как парсить тип на основе формата сериализации
 	switch {
@@ -633,12 +633,12 @@ func toIDWithImport(qualifiedName string, srcFile *GoFile) *Statement {
 }
 
 // arguments возвращает аргументы без context и специальных параметров.
-func (r *contractRenderer) arguments(method *core.Method) []*core.Variable {
+func (r *contractRenderer) arguments(method *parser.Method) []*parser.Variable {
 	return r.argsWithoutSpecialArgs(method)
 }
 
 // urlArgs генерирует код для извлечения аргументов из path параметров.
-func (r *contractRenderer) urlArgs(srcFile *GoFile, typeGen *types.Generator, method *core.Method, errStatement func(arg, header string) *Statement) *Statement {
+func (r *contractRenderer) urlArgs(srcFile *GoFile, typeGen *types.Generator, method *parser.Method, errStatement func(arg, header string) *Statement) *Statement {
 	return r.argFromString(srcFile, typeGen, method, "urlParam", r.argPathMap(method),
 		func(srcName string) Code {
 			return Id(VarNameFtx).Dot("Params").Call(Lit(srcName))
@@ -648,7 +648,7 @@ func (r *contractRenderer) urlArgs(srcFile *GoFile, typeGen *types.Generator, me
 }
 
 // urlParams генерирует код для извлечения аргументов из query параметров.
-func (r *contractRenderer) urlParams(srcFile *GoFile, typeGen *types.Generator, method *core.Method, errStatement func(arg, header string) *Statement) *Statement {
+func (r *contractRenderer) urlParams(srcFile *GoFile, typeGen *types.Generator, method *parser.Method, errStatement func(arg, header string) *Statement) *Statement {
 	queryParams := make(map[string]string)
 	if urlArgs := method.Annotations.Value(TagHttpArg, ""); urlArgs != "" {
 		paramPairs := strings.Split(urlArgs, ",")
@@ -706,7 +706,7 @@ func (r *contractRenderer) urlParams(srcFile *GoFile, typeGen *types.Generator, 
 }
 
 // httpArgHeaders генерирует код для извлечения аргументов из HTTP заголовков.
-func (r *contractRenderer) httpArgHeaders(srcFile *GoFile, typeGen *types.Generator, method *core.Method, errStatement func(arg, header string) *Statement) *Statement {
+func (r *contractRenderer) httpArgHeaders(srcFile *GoFile, typeGen *types.Generator, method *parser.Method, errStatement func(arg, header string) *Statement) *Statement {
 	return r.argFromString(srcFile, typeGen, method, "header", r.varHeaderMap(method),
 		func(srcName string) Code {
 			return Id(VarNameFtx).Dot("Get").Call(Lit(srcName))
@@ -716,7 +716,7 @@ func (r *contractRenderer) httpArgHeaders(srcFile *GoFile, typeGen *types.Genera
 }
 
 // httpCookies генерирует код для извлечения аргументов из HTTP cookies.
-func (r *contractRenderer) httpCookies(srcFile *GoFile, typeGen *types.Generator, method *core.Method, errStatement func(arg, header string) *Statement) *Statement {
+func (r *contractRenderer) httpCookies(srcFile *GoFile, typeGen *types.Generator, method *parser.Method, errStatement func(arg, header string) *Statement) *Statement {
 	return r.argFromString(srcFile, typeGen, method, "cookie", r.varCookieMap(method),
 		func(srcName string) Code {
 			return Id(VarNameFtx).Dot("Cookies").Call(Lit(srcName))
@@ -726,7 +726,7 @@ func (r *contractRenderer) httpCookies(srcFile *GoFile, typeGen *types.Generator
 }
 
 // httpRetHeaders генерирует код для установки HTTP заголовков из результатов.
-func (r *contractRenderer) httpRetHeaders(method *core.Method) *Statement {
+func (r *contractRenderer) httpRetHeaders(method *parser.Method) *Statement {
 	ex := Line()
 	headerMap := r.varHeaderMap(method)
 	for varName, headerName := range headerMap {
@@ -735,4 +735,26 @@ func (r *contractRenderer) httpRetHeaders(method *core.Method) *Statement {
 		}
 	}
 	return ex
+}
+
+// getSerializationFormat определяет OpenAPI тип и формат для типа.
+func getSerializationFormat(typ *parser.Type, project *parser.Project) (openAPIType string, format string) {
+
+	// Проверяем time.Time
+	if typ.ImportPkgPath == "time" && typ.TypeName == "Time" {
+		return "string", "date-time"
+	}
+
+	// Проверяем UUID
+	if strings.Contains(typ.TypeName, "UUID") || strings.Contains(typ.ImportPkgPath, "uuid") {
+		return "string", "uuid"
+	}
+
+	// Проверяем, реализует ли тип json.Marshaler
+	if containsString(typ.ImplementsInterfaces, "encoding/json.Marshaler") {
+		return "string", ""
+	}
+
+	// Для остальных типов возвращаем пустые значения
+	return "", ""
 }

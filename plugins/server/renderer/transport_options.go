@@ -8,7 +8,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 // RenderTransportOptions генерирует транспортный options файл.
@@ -66,7 +66,7 @@ func (r *transportRenderer) renderOptionsForContracts(srcFile *GoFile) {
 
 	if r.hasHTTPService() {
 		// Находим контракт с аннотацией http-server
-		var httpContract *core.Contract
+		var httpContract *parser.Contract
 		for _, contract := range r.project.Contracts {
 			if contract.Annotations.Contains(TagServerHTTP) {
 				httpContract = contract

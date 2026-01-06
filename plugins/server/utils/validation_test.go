@@ -5,14 +5,14 @@ package utils
 import (
 	"testing"
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 func TestValidateProject(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		project *core.Project
+		project *parser.Project
 		wantErr bool
 	}{
 		{
@@ -22,14 +22,14 @@ func TestValidateProject(t *testing.T) {
 		},
 		{
 			name: "empty module path",
-			project: &core.Project{
+			project: &parser.Project{
 				ModulePath: "",
 			},
 			wantErr: true,
 		},
 		{
 			name: "valid project",
-			project: &core.Project{
+			project: &parser.Project{
 				ModulePath: "github.com/example/project",
 			},
 			wantErr: false,
@@ -106,8 +106,8 @@ func TestValidateOutDir(t *testing.T) {
 
 func TestFindContract(t *testing.T) {
 
-	project := &core.Project{
-		Contracts: []*core.Contract{
+	project := &parser.Project{
+		Contracts: []*parser.Contract{
 			{ID: "contract1", Name: "Contract1"},
 			{ID: "contract2", Name: "Contract2"},
 		},
@@ -115,7 +115,7 @@ func TestFindContract(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		project    *core.Project
+		project    *parser.Project
 		contractID string
 		wantErr    bool
 		wantName   string

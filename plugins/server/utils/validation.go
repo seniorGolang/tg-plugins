@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 // ValidateProject проверяет корректность проекта.
-func ValidateProject(project *core.Project) error {
+func ValidateProject(project *parser.Project) error {
 
 	if project == nil {
 		return fmt.Errorf("project cannot be nil")
@@ -40,7 +40,7 @@ func ValidateOutDir(outDir string) error {
 }
 
 // FindContract находит контракт по ID и возвращает ошибку, если не найден.
-func FindContract(project *core.Project, contractID string) (*core.Contract, error) {
+func FindContract(project *parser.Project, contractID string) (*parser.Contract, error) {
 
 	if project == nil {
 		return nil, fmt.Errorf("project cannot be nil")
@@ -59,7 +59,7 @@ func FindContract(project *core.Project, contractID string) (*core.Contract, err
 }
 
 // ValidateContract проверяет корректность контракта.
-func ValidateContract(contract *core.Contract, project *core.Project) error {
+func ValidateContract(contract *parser.Contract, project *parser.Project) error {
 
 	if contract == nil {
 		return fmt.Errorf("contract cannot be nil")
@@ -99,7 +99,7 @@ func ValidateContract(contract *core.Contract, project *core.Project) error {
 }
 
 // validateVariable проверяет переменную и все вложенные типы на наличие неподдерживаемых типов.
-func validateVariable(v *core.Variable, project *core.Project, contractName, methodName, varType string) error {
+func validateVariable(v *parser.Variable, project *parser.Project, contractName, methodName, varType string) error {
 
 	// Проверяем на дженерики (типы с параметрами типа)
 	if err := validateVariableForGenerics(v, project, contractName, methodName, varType); err != nil {
@@ -122,9 +122,9 @@ func validateVariable(v *core.Variable, project *core.Project, contractName, met
 
 	// Рекурсивно проверяем поля структур
 	typ, ok := project.Types[v.TypeID]
-	if ok && typ.Kind == core.TypeKindStruct {
+	if ok && typ.Kind == parser.TypeKindStruct {
 		for _, field := range typ.StructFields {
-			fieldVar := &core.Variable{
+			fieldVar := &parser.Variable{
 				Name:             field.Name,
 				TypeID:           field.TypeID,
 				NumberOfPointers: field.NumberOfPointers,
@@ -143,11 +143,11 @@ func validateVariable(v *core.Variable, project *core.Project, contractName, met
 	}
 
 	// Проверяем алиасы структур
-	if ok && typ.Kind == core.TypeKindAlias && typ.AliasOf != "" {
+	if ok && typ.Kind == parser.TypeKindAlias && typ.AliasOf != "" {
 		aliasType, ok := project.Types[typ.AliasOf]
-		if ok && aliasType.Kind == core.TypeKindStruct {
+		if ok && aliasType.Kind == parser.TypeKindStruct {
 			for _, field := range aliasType.StructFields {
-				fieldVar := &core.Variable{
+				fieldVar := &parser.Variable{
 					Name:             field.Name,
 					TypeID:           field.TypeID,
 					NumberOfPointers: field.NumberOfPointers,
@@ -170,7 +170,7 @@ func validateVariable(v *core.Variable, project *core.Project, contractName, met
 }
 
 // validateVariableForGenerics проверяет переменную на наличие дженериков (не поддерживаются).
-func validateVariableForGenerics(v *core.Variable, project *core.Project, contractName, methodName, varType string) error {
+func validateVariableForGenerics(v *parser.Variable, project *parser.Project, contractName, methodName, varType string) error {
 
 	// Проверяем TypeID на наличие параметров типа (дженерики)
 	// Дженерики в Go имеют формат типа "package:Type[T]" или содержат квадратные скобки
@@ -207,18 +207,18 @@ func validateVariableForGenerics(v *core.Variable, project *core.Project, contra
 }
 
 // validateVariableForChan проверяет переменную на наличие chan типа.
-func validateVariableForChan(v *core.Variable, project *core.Project, contractName, methodName, varType string) error {
+func validateVariableForChan(v *parser.Variable, project *parser.Project, contractName, methodName, varType string) error {
 
 	// Проверяем, является ли тип каналом
 	typ, ok := project.Types[v.TypeID]
-	if ok && typ.Kind == core.TypeKindChan {
+	if ok && typ.Kind == parser.TypeKindChan {
 		return fmt.Errorf("contract %q: method %q: %s %q has unsupported type chan (channels are not supported)", contractName, methodName, varType, v.Name)
 	}
 
 	// Проверяем map значения на наличие chan
 	if v.MapValueID != "" {
 		mapValueType, ok := project.Types[v.MapValueID]
-		if ok && mapValueType.Kind == core.TypeKindChan {
+		if ok && mapValueType.Kind == parser.TypeKindChan {
 			return fmt.Errorf("contract %q: method %q: %s %q has unsupported type map with chan value (channels are not supported)", contractName, methodName, varType, v.Name)
 		}
 	}
@@ -226,7 +226,7 @@ func validateVariableForChan(v *core.Variable, project *core.Project, contractNa
 	// Проверяем map ключи на наличие chan
 	if v.MapKeyID != "" {
 		mapKeyType, ok := project.Types[v.MapKeyID]
-		if ok && mapKeyType.Kind == core.TypeKindChan {
+		if ok && mapKeyType.Kind == parser.TypeKindChan {
 			return fmt.Errorf("contract %q: method %q: %s %q has unsupported type map with chan key (channels are not supported)", contractName, methodName, varType, v.Name)
 		}
 	}
@@ -235,7 +235,7 @@ func validateVariableForChan(v *core.Variable, project *core.Project, contractNa
 	if v.IsSlice {
 		// Для слайсов TypeID содержит тип элемента
 		elementType, ok := project.Types[v.TypeID]
-		if ok && elementType.Kind == core.TypeKindChan {
+		if ok && elementType.Kind == parser.TypeKindChan {
 			return fmt.Errorf("contract %q: method %q: %s %q has unsupported type slice of chan (channels are not supported)", contractName, methodName, varType, v.Name)
 		}
 	}
@@ -244,18 +244,18 @@ func validateVariableForChan(v *core.Variable, project *core.Project, contractNa
 }
 
 // validateVariableForFunction проверяет переменную на наличие function типа.
-func validateVariableForFunction(v *core.Variable, project *core.Project, contractName, methodName, varType string) error {
+func validateVariableForFunction(v *parser.Variable, project *parser.Project, contractName, methodName, varType string) error {
 
 	// Проверяем, является ли тип функцией
 	typ, ok := project.Types[v.TypeID]
-	if ok && typ.Kind == core.TypeKindFunction {
+	if ok && typ.Kind == parser.TypeKindFunction {
 		return fmt.Errorf("contract %q: method %q: %s %q has unsupported type func (function types are not supported)", contractName, methodName, varType, v.Name)
 	}
 
 	// Проверяем map значения на наличие function
 	if v.MapValueID != "" {
 		mapValueType, ok := project.Types[v.MapValueID]
-		if ok && mapValueType.Kind == core.TypeKindFunction {
+		if ok && mapValueType.Kind == parser.TypeKindFunction {
 			return fmt.Errorf("contract %q: method %q: %s %q has unsupported type map with func value (function types are not supported)", contractName, methodName, varType, v.Name)
 		}
 	}
@@ -263,7 +263,7 @@ func validateVariableForFunction(v *core.Variable, project *core.Project, contra
 	// Проверяем map ключи на наличие function
 	if v.MapKeyID != "" {
 		mapKeyType, ok := project.Types[v.MapKeyID]
-		if ok && mapKeyType.Kind == core.TypeKindFunction {
+		if ok && mapKeyType.Kind == parser.TypeKindFunction {
 			return fmt.Errorf("contract %q: method %q: %s %q has unsupported type map with func key (function types are not supported)", contractName, methodName, varType, v.Name)
 		}
 	}
@@ -272,7 +272,7 @@ func validateVariableForFunction(v *core.Variable, project *core.Project, contra
 	if v.IsSlice {
 		// Для слайсов TypeID содержит тип элемента
 		elementType, ok := project.Types[v.TypeID]
-		if ok && elementType.Kind == core.TypeKindFunction {
+		if ok && elementType.Kind == parser.TypeKindFunction {
 			return fmt.Errorf("contract %q: method %q: %s %q has unsupported type slice of func (function types are not supported)", contractName, methodName, varType, v.Name)
 		}
 	}
@@ -281,7 +281,7 @@ func validateVariableForFunction(v *core.Variable, project *core.Project, contra
 }
 
 // validateVariableForUnsafe проверяет переменную на наличие unsafe типов.
-func validateVariableForUnsafe(v *core.Variable, project *core.Project, contractName, methodName, varType string) error {
+func validateVariableForUnsafe(v *parser.Variable, project *parser.Project, contractName, methodName, varType string) error {
 
 	// Проверяем, является ли тип unsafe.Pointer
 	if v.TypeID == "unsafe:Pointer" {
@@ -307,11 +307,11 @@ func validateVariableForUnsafe(v *core.Variable, project *core.Project, contract
 }
 
 // validateVariableForInterface проверяет переменную на наличие interface{} типа (не поддерживается, кроме any и context.Context).
-func validateVariableForInterface(v *core.Variable, project *core.Project, contractName, methodName, varType string) error {
+func validateVariableForInterface(v *parser.Variable, project *parser.Project, contractName, methodName, varType string) error {
 
 	// Проверяем, является ли тип interface{} (но any и context.Context поддерживаются)
 	typ, ok := project.Types[v.TypeID]
-	if ok && typ.Kind == core.TypeKindInterface {
+	if ok && typ.Kind == parser.TypeKindInterface {
 		// context.Context - это интерфейс, но он поддерживается
 		if v.TypeID == "context:Context" {
 			return nil
@@ -328,7 +328,7 @@ func validateVariableForInterface(v *core.Variable, project *core.Project, contr
 	// Проверяем map значения на наличие interface
 	if v.MapValueID != "" {
 		mapValueType, ok := project.Types[v.MapValueID]
-		if ok && mapValueType.Kind == core.TypeKindInterface {
+		if ok && mapValueType.Kind == parser.TypeKindInterface {
 			if strings.Contains(v.MapValueID, ":interface:anonymous") || v.MapValueID == "interface{}" {
 				return fmt.Errorf("contract %q: method %q: %s %q has unsupported type map with interface{} value (use 'any' instead)", contractName, methodName, varType, v.Name)
 			}
@@ -339,7 +339,7 @@ func validateVariableForInterface(v *core.Variable, project *core.Project, contr
 	// Проверяем map ключи на наличие interface
 	if v.MapKeyID != "" {
 		mapKeyType, ok := project.Types[v.MapKeyID]
-		if ok && mapKeyType.Kind == core.TypeKindInterface {
+		if ok && mapKeyType.Kind == parser.TypeKindInterface {
 			if strings.Contains(v.MapKeyID, ":interface:anonymous") || v.MapKeyID == "interface{}" {
 				return fmt.Errorf("contract %q: method %q: %s %q has unsupported type map with interface{} key (use 'any' instead)", contractName, methodName, varType, v.Name)
 			}
@@ -350,7 +350,7 @@ func validateVariableForInterface(v *core.Variable, project *core.Project, contr
 	// Проверяем элементы слайса на наличие interface
 	if v.IsSlice {
 		elementType, ok := project.Types[v.TypeID]
-		if ok && elementType.Kind == core.TypeKindInterface {
+		if ok && elementType.Kind == parser.TypeKindInterface {
 			if strings.Contains(v.TypeID, ":interface:anonymous") || v.TypeID == "interface{}" {
 				return fmt.Errorf("contract %q: method %q: %s %q has unsupported type slice of interface{} (use 'any' instead)", contractName, methodName, varType, v.Name)
 			}

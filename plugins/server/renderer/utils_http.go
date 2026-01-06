@@ -9,7 +9,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 // batchPath возвращает путь для batch запросов.
@@ -24,7 +24,7 @@ func (r *contractRenderer) batchPath() string {
 }
 
 // methodHTTPMethod возвращает HTTP метод для метода контракта.
-func (r *contractRenderer) methodHTTPMethod(method *core.Method) string {
+func (r *contractRenderer) methodHTTPMethod(method *parser.Method) string {
 
 	httpMethod := method.Annotations.Value(TagMethodHTTP, "")
 	if httpMethod == "" {
@@ -47,7 +47,7 @@ func (r *contractRenderer) methodHTTPMethod(method *core.Method) string {
 }
 
 // methodHTTPPath возвращает HTTP путь для метода контракта.
-func (r *contractRenderer) methodHTTPPath(method *core.Method) string {
+func (r *contractRenderer) methodHTTPPath(method *parser.Method) string {
 
 	prefix := r.contract.Annotations.Value(TagHttpPrefix, "")
 	methodPath := method.Annotations.Value(TagHttpPath, "/"+toLowerCamel(r.contract.Name)+"/"+toLowerCamel(method.Name))
@@ -58,7 +58,7 @@ func (r *contractRenderer) methodHTTPPath(method *core.Method) string {
 }
 
 // methodJsonRPCPath возвращает путь для JSON-RPC метода.
-func (r *contractRenderer) methodJsonRPCPath(method *core.Method) string {
+func (r *contractRenderer) methodJsonRPCPath(method *parser.Method) string {
 
 	var elements []string
 	elements = append(elements, "/")
@@ -69,7 +69,7 @@ func (r *contractRenderer) methodJsonRPCPath(method *core.Method) string {
 }
 
 // methodIsJsonRPC проверяет, является ли метод JSON-RPC методом.
-func (r *contractRenderer) methodIsJsonRPC(method *core.Method) bool {
+func (r *contractRenderer) methodIsJsonRPC(method *parser.Method) bool {
 
 	if method == nil || method.Annotations == nil {
 		return false
@@ -78,7 +78,7 @@ func (r *contractRenderer) methodIsJsonRPC(method *core.Method) bool {
 }
 
 // methodHandlerQual возвращает квалифицированное имя обработчика для метода.
-func (r *contractRenderer) methodHandlerQual(srcFile *GoFile, method *core.Method) Code {
+func (r *contractRenderer) methodHandlerQual(srcFile *GoFile, method *parser.Method) Code {
 
 	handlerValue := method.Annotations.Value(TagHandler, "")
 	if handlerValue == "" {

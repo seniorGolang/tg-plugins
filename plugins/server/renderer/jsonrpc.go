@@ -10,7 +10,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 	"tgp/plugins/server/renderer/types"
 )
 
@@ -62,7 +62,7 @@ func (r *contractRenderer) RenderJsonRPC() error {
 }
 
 // rpcMethodFuncWithFiberCtx генерирует функцию обработки JSON-RPC метода с Fiber контекстом.
-func (r *contractRenderer) rpcMethodFuncWithFiberCtx(typeGen *types.Generator, method *core.Method, jsonPkg string) Code {
+func (r *contractRenderer) rpcMethodFuncWithFiberCtx(typeGen *types.Generator, method *parser.Method, jsonPkg string) Code {
 
 	return Func().Params(Id("http").Op("*").Id("http"+r.contract.Name)).
 		Id(toLowerCamel(method.Name)).
@@ -129,7 +129,7 @@ func (r *contractRenderer) rpcMethodFuncWithFiberCtx(typeGen *types.Generator, m
 }
 
 // rpcMethodFuncWithContext генерирует функцию обработки JSON-RPC метода с контекстом.
-func (r *contractRenderer) rpcMethodFuncWithContext(typeGen *types.Generator, method *core.Method, jsonPkg string) Code {
+func (r *contractRenderer) rpcMethodFuncWithContext(typeGen *types.Generator, method *parser.Method, jsonPkg string) Code {
 
 	return Func().Params(Id("http").Op("*").Id("http"+r.contract.Name)).
 		Id(toLowerCamel(method.Name)+"WithContext").

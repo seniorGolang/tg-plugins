@@ -5,24 +5,24 @@ package utils
 import (
 	"testing"
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 func TestIsContextFirst(t *testing.T) {
 
 	tests := []struct {
 		name string
-		vars []*core.Variable
+		vars []*parser.Variable
 		want bool
 	}{
 		{
 			name: "empty vars",
-			vars: []*core.Variable{},
+			vars: []*parser.Variable{},
 			want: false,
 		},
 		{
 			name: "context first",
-			vars: []*core.Variable{
+			vars: []*parser.Variable{
 				{TypeID: "context:Context"},
 				{TypeID: "string"},
 			},
@@ -30,7 +30,7 @@ func TestIsContextFirst(t *testing.T) {
 		},
 		{
 			name: "context not first",
-			vars: []*core.Variable{
+			vars: []*parser.Variable{
 				{TypeID: "string"},
 				{TypeID: "context:Context"},
 			},
@@ -51,17 +51,17 @@ func TestIsErrorLast(t *testing.T) {
 
 	tests := []struct {
 		name string
-		vars []*core.Variable
+		vars []*parser.Variable
 		want bool
 	}{
 		{
 			name: "empty vars",
-			vars: []*core.Variable{},
+			vars: []*parser.Variable{},
 			want: false,
 		},
 		{
 			name: "error last",
-			vars: []*core.Variable{
+			vars: []*parser.Variable{
 				{TypeID: "string"},
 				{TypeID: "error"},
 			},
@@ -69,7 +69,7 @@ func TestIsErrorLast(t *testing.T) {
 		},
 		{
 			name: "error not last",
-			vars: []*core.Variable{
+			vars: []*parser.Variable{
 				{TypeID: "error"},
 				{TypeID: "string"},
 			},
@@ -90,13 +90,13 @@ func TestArgsWithoutContext(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		method *core.Method
+		method *parser.Method
 		want   int
 	}{
 		{
 			name: "with context",
-			method: &core.Method{
-				Args: []*core.Variable{
+			method: &parser.Method{
+				Args: []*parser.Variable{
 					{TypeID: "context:Context"},
 					{TypeID: "string"},
 				},
@@ -105,8 +105,8 @@ func TestArgsWithoutContext(t *testing.T) {
 		},
 		{
 			name: "without context",
-			method: &core.Method{
-				Args: []*core.Variable{
+			method: &parser.Method{
+				Args: []*parser.Variable{
 					{TypeID: "string"},
 				},
 			},
@@ -128,13 +128,13 @@ func TestResultsWithoutError(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		method *core.Method
+		method *parser.Method
 		want   int
 	}{
 		{
 			name: "with error",
-			method: &core.Method{
-				Results: []*core.Variable{
+			method: &parser.Method{
+				Results: []*parser.Variable{
 					{TypeID: "string"},
 					{TypeID: "error"},
 				},
@@ -143,8 +143,8 @@ func TestResultsWithoutError(t *testing.T) {
 		},
 		{
 			name: "without error",
-			method: &core.Method{
-				Results: []*core.Variable{
+			method: &parser.Method{
+				Results: []*parser.Variable{
 					{TypeID: "string"},
 				},
 			},

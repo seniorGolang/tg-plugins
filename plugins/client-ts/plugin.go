@@ -17,13 +17,14 @@ type ClientTsPlugin struct{}
 // Info возвращает информацию о плагине.
 func (p *ClientTsPlugin) Info() core.PluginInfo {
 	return core.PluginInfo{
-		Name:        "client-ts",
-		Persistent:  false,
-		Version:     "2.4.0",
-		Description: translate("TypeScript client generator for HTTP/JSON-RPC servers"),
-		Author:      "AlexK (seniorGolang@gmail.com)",
-		License:     "MIT",
-		Category:    "client",
+		Name:         "client-ts",
+		Persistent:   false,
+		Version:      "2.4.0",
+		Description:  translate("TypeScript client generator for HTTP/JSON-RPC servers"),
+		Author:       "AlexK (seniorGolang@gmail.com)",
+		License:      "MIT",
+		Category:     "client",
+		Dependencies: []string{"astg"},
 		Commands: []core.Command{
 			{
 				Path:        []string{"client", "ts"},

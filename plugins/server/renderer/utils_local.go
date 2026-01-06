@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 // requestStructName возвращает имя структуры request для метода.
@@ -22,7 +22,7 @@ func responseStructName(contractName string, methodName string) string {
 }
 
 // argsWithoutContext возвращает аргументы без первого context.Context, если он есть.
-func argsWithoutContext(method *core.Method) []*core.Variable {
+func argsWithoutContext(method *parser.Method) []*parser.Variable {
 
 	if len(method.Args) == 0 {
 		return method.Args
@@ -34,7 +34,7 @@ func argsWithoutContext(method *core.Method) []*core.Variable {
 }
 
 // resultsWithoutError возвращает результаты без последнего error, если он есть.
-func resultsWithoutError(method *core.Method) []*core.Variable {
+func resultsWithoutError(method *parser.Method) []*parser.Variable {
 
 	if len(method.Results) == 0 {
 		return method.Results
@@ -46,9 +46,9 @@ func resultsWithoutError(method *core.Method) []*core.Variable {
 }
 
 // removeSkippedFields удаляет поля из списка, которые указаны в skipFields.
-func removeSkippedFields(vars []*core.Variable, skipFields []string) []*core.Variable {
+func removeSkippedFields(vars []*parser.Variable, skipFields []string) []*parser.Variable {
 
-	result := make([]*core.Variable, 0, len(vars))
+	result := make([]*parser.Variable, 0, len(vars))
 	for _, v := range vars {
 		found := false
 		for _, skip := range skipFields {

@@ -20,13 +20,14 @@ type ServerPlugin struct{}
 // Info возвращает информацию о плагине.
 func (p *ServerPlugin) Info() core.PluginInfo {
 	return core.PluginInfo{
-		Name:        "server",
-		Version:     "2.4.0",
-		Doc:         pluginDoc,
-		Description: translate("Server code generator for HTTP/JSON-RPC servers based on Fiber"),
-		Author:      "AlexK (seniorGolang@gmail.com)",
-		License:     "MIT",
-		Category:    "server",
+		Name:         "server",
+		Version:      "2.4.0",
+		Doc:          pluginDoc,
+		Description:  translate("Server code generator for HTTP/JSON-RPC servers based on Fiber"),
+		Author:       "AlexK (seniorGolang@gmail.com)",
+		License:      "MIT",
+		Category:     "server",
+		Dependencies: []string{"astg"},
 		Commands: []core.Command{
 			{
 				Path:        []string{"server"},
@@ -80,7 +81,7 @@ func (p *ServerPlugin) Execute(rootDir string, request core.Storage, path ...str
 		return nil, fmt.Errorf("project is required in request")
 	}
 
-	// Преобразуем project в core.Project (используется tgp/plugins/server/core.Project)
+	// Преобразуем project в parser.Project (используется tgp/internal/parser.Project)
 	// projectVal может быть map[string]any (сериализованный Project)
 	coreProject, err := generator.DeserializeProject(projectVal)
 	if err != nil {

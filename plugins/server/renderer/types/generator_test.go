@@ -7,7 +7,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 // mockSrcFile реализует интерфейс SrcFile для тестирования.
@@ -35,13 +35,13 @@ func (m *mockSrcFile) Add(code ...*Statement) *Statement {
 
 func TestGenerator_FieldType_Caching(t *testing.T) {
 
-	project := &core.Project{
-		Types: map[string]*core.Type{
+	project := &parser.Project{
+		Types: map[string]*parser.Type{
 			"string": {
-				Kind: core.TypeKindString,
+				Kind: parser.TypeKindString,
 			},
 			"int": {
-				Kind: core.TypeKindInt,
+				Kind: parser.TypeKindInt,
 			},
 		},
 	}
@@ -80,16 +80,16 @@ func TestGenerator_FieldType_Caching(t *testing.T) {
 
 func TestGenerator_FieldType_PrimitiveTypes(t *testing.T) {
 
-	project := &core.Project{
-		Types: map[string]*core.Type{
+	project := &parser.Project{
+		Types: map[string]*parser.Type{
 			"string": {
-				Kind: core.TypeKindString,
+				Kind: parser.TypeKindString,
 			},
 			"int": {
-				Kind: core.TypeKindInt,
+				Kind: parser.TypeKindInt,
 			},
 			"bool": {
-				Kind: core.TypeKindBool,
+				Kind: parser.TypeKindBool,
 			},
 		},
 	}
@@ -122,13 +122,13 @@ func TestGenerator_FieldType_PrimitiveTypes(t *testing.T) {
 
 func TestGenerator_FieldType_ArrayTypes(t *testing.T) {
 
-	project := &core.Project{
-		Types: map[string]*core.Type{
+	project := &parser.Project{
+		Types: map[string]*parser.Type{
 			"string": {
-				Kind: core.TypeKindString,
+				Kind: parser.TypeKindString,
 			},
 			"[]string": {
-				Kind:      core.TypeKindArray,
+				Kind:      parser.TypeKindArray,
 				IsSlice:   true,
 				ArrayOfID: "string",
 			},
@@ -146,10 +146,10 @@ func TestGenerator_FieldType_ArrayTypes(t *testing.T) {
 
 func TestGenerator_FieldTypeFromVariable(t *testing.T) {
 
-	project := &core.Project{
-		Types: map[string]*core.Type{
+	project := &parser.Project{
+		Types: map[string]*parser.Type{
 			"string": {
-				Kind: core.TypeKindString,
+				Kind: parser.TypeKindString,
 			},
 		},
 	}
@@ -159,18 +159,18 @@ func TestGenerator_FieldTypeFromVariable(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		variable *core.Variable
+		variable *parser.Variable
 	}{
 		{
 			name: "simple variable",
-			variable: &core.Variable{
+			variable: &parser.Variable{
 				TypeID:           "string",
 				NumberOfPointers: 0,
 			},
 		},
 		{
 			name: "slice variable",
-			variable: &core.Variable{
+			variable: &parser.Variable{
 				TypeID:           "string",
 				NumberOfPointers: 0,
 				IsSlice:          true,
@@ -178,14 +178,14 @@ func TestGenerator_FieldTypeFromVariable(t *testing.T) {
 		},
 		{
 			name: "pointer variable",
-			variable: &core.Variable{
+			variable: &parser.Variable{
 				TypeID:           "string",
 				NumberOfPointers: 1,
 			},
 		},
 		{
 			name: "ellipsis variable",
-			variable: &core.Variable{
+			variable: &parser.Variable{
 				TypeID:           "string",
 				NumberOfPointers: 0,
 				IsEllipsis:       true,
@@ -205,13 +205,13 @@ func TestGenerator_FieldTypeFromVariable(t *testing.T) {
 
 func TestGenerator_FuncDefinitionParams(t *testing.T) {
 
-	project := &core.Project{
-		Types: map[string]*core.Type{
+	project := &parser.Project{
+		Types: map[string]*parser.Type{
 			"string": {
-				Kind: core.TypeKindString,
+				Kind: parser.TypeKindString,
 			},
 			"int": {
-				Kind: core.TypeKindInt,
+				Kind: parser.TypeKindInt,
 			},
 		},
 	}
@@ -219,7 +219,7 @@ func TestGenerator_FuncDefinitionParams(t *testing.T) {
 	srcFile := newMockSrcFile()
 	gen := NewGenerator(project, srcFile)
 
-	vars := []*core.Variable{
+	vars := []*parser.Variable{
 		{
 			Name:   "name",
 			TypeID: "string",

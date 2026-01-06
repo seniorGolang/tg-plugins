@@ -10,7 +10,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 	"tgp/plugins/server/renderer/types"
 )
 
@@ -68,6 +68,6 @@ func (r *contractRenderer) RenderTrace() error {
 }
 
 // methodFullName возвращает полное имя метода в формате "serviceName.methodName".
-func (r *contractRenderer) methodFullName(method *core.Method) string {
+func (r *contractRenderer) methodFullName(method *parser.Method) string {
 	return fmt.Sprintf("%s.%s", toLowerCamel(r.contract.Name), toLowerCamel(method.Name))
 }

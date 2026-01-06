@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 //go:embed pkg/context pkg/logger pkg/tracer pkg/viewer
@@ -19,14 +19,14 @@ var pkgFiles embed.FS
 
 // baseRenderer содержит общую функциональность для всех рендереров.
 type baseRenderer struct {
-	project     *core.Project
-	contract    *core.Contract
+	project     *parser.Project
+	contract    *parser.Contract
 	outDir      string
 	projectRoot string
 }
 
 // newBaseRenderer создает базовый рендерер.
-func newBaseRenderer(project *core.Project, contract *core.Contract, outDir, projectRoot string) *baseRenderer {
+func newBaseRenderer(project *parser.Project, contract *parser.Contract, outDir, projectRoot string) *baseRenderer {
 	return &baseRenderer{
 		project:     project,
 		contract:    contract,
@@ -129,7 +129,7 @@ type contractRenderer struct {
 }
 
 // NewContractRenderer создает рендерер для конкретного контракта.
-func NewContractRenderer(project *core.Project, contract *core.Contract, outDir, projectRoot string) Renderer {
+func NewContractRenderer(project *parser.Project, contract *parser.Contract, outDir, projectRoot string) Renderer {
 	return &contractRenderer{
 		baseRenderer: newBaseRenderer(project, contract, outDir, projectRoot),
 	}
@@ -141,7 +141,7 @@ type transportRenderer struct {
 }
 
 // NewTransportRenderer создает рендерер для транспортных файлов.
-func NewTransportRenderer(project *core.Project, outDir, projectRoot string) Renderer {
+func NewTransportRenderer(project *parser.Project, outDir, projectRoot string) Renderer {
 	return &transportRenderer{
 		baseRenderer: newBaseRenderer(project, nil, outDir, projectRoot),
 	}

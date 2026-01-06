@@ -10,18 +10,18 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 // Generator генерирует типы для Go кода.
 type Generator struct {
-	project   *core.Project
+	project   *parser.Project
 	srcFile   SrcFile
 	typeCache map[string]*Statement
 }
 
 // NewGenerator создает новый генератор типов.
-func NewGenerator(project *core.Project, srcFile SrcFile) *Generator {
+func NewGenerator(project *parser.Project, srcFile SrcFile) *Generator {
 	return &Generator{
 		project:   project,
 		srcFile:   srcFile,
@@ -30,7 +30,7 @@ func NewGenerator(project *core.Project, srcFile SrcFile) *Generator {
 }
 
 // FieldTypeFromVariable конвертирует тип из Variable в код jennifer.
-func (g *Generator) FieldTypeFromVariable(variable *core.Variable, allowEllipsis bool) *Statement {
+func (g *Generator) FieldTypeFromVariable(variable *parser.Variable, allowEllipsis bool) *Statement {
 	c := &Statement{}
 
 	// Обрабатываем ellipsis
@@ -124,19 +124,19 @@ func (g *Generator) fieldTypeImpl(typeID string, numberOfPointers int, allowElli
 
 	// Обрабатываем в зависимости от вида типа
 	switch typ.Kind {
-	case core.TypeKindArray:
+	case parser.TypeKindArray:
 		return g.fieldTypeArray(typ, c)
-	case core.TypeKindMap:
+	case parser.TypeKindMap:
 		return g.fieldTypeMap(typ, c)
-	case core.TypeKindChan:
+	case parser.TypeKindChan:
 		return g.fieldTypeChan(typ, c)
-	case core.TypeKindStruct:
+	case parser.TypeKindStruct:
 		return g.fieldTypeStruct(typ, c)
-	case core.TypeKindInterface:
+	case parser.TypeKindInterface:
 		return g.fieldTypeInterface(typ, c)
-	case core.TypeKindFunction:
+	case parser.TypeKindFunction:
 		return g.fieldTypeFunction(typ, c)
-	case core.TypeKindAlias:
+	case parser.TypeKindAlias:
 		return g.fieldTypeAlias(typ, numberOfPointers, allowEllipsis, c)
 	default:
 		return g.fieldTypePrimitive(typ, typeID, c)
@@ -158,7 +158,7 @@ func (g *Generator) fieldTypeFromID(typeID string, c *Statement) *Statement {
 }
 
 // fieldTypeArray генерирует код для массива или слайса.
-func (g *Generator) fieldTypeArray(typ *core.Type, c *Statement) *Statement {
+func (g *Generator) fieldTypeArray(typ *parser.Type, c *Statement) *Statement {
 	// Если это именованный тип, который определен как массив
 	if typ.TypeName != "" && (typ.ImportPkgPath != "" || typ.PkgName != "") {
 		return g.fieldTypeNamed(typ, c)
@@ -180,7 +180,7 @@ func (g *Generator) fieldTypeArray(typ *core.Type, c *Statement) *Statement {
 }
 
 // fieldTypeMap генерирует код для map.
-func (g *Generator) fieldTypeMap(typ *core.Type, c *Statement) *Statement {
+func (g *Generator) fieldTypeMap(typ *parser.Type, c *Statement) *Statement {
 	if typ.MapKeyID != "" && typ.MapValueID != "" {
 		keyType := g.FieldType(typ.MapKeyID, typ.MapKeyPointers, false)
 		valueType := g.FieldType(typ.MapValueID, typ.ElementPointers, false)
@@ -190,7 +190,7 @@ func (g *Generator) fieldTypeMap(typ *core.Type, c *Statement) *Statement {
 }
 
 // fieldTypeChan генерирует код для канала.
-func (g *Generator) fieldTypeChan(typ *core.Type, c *Statement) *Statement {
+func (g *Generator) fieldTypeChan(typ *parser.Type, c *Statement) *Statement {
 	switch typ.ChanDirection {
 	case 1: // send only
 		c.Chan().Op("<-")
@@ -206,17 +206,17 @@ func (g *Generator) fieldTypeChan(typ *core.Type, c *Statement) *Statement {
 }
 
 // fieldTypeStruct генерирует код для структуры.
-func (g *Generator) fieldTypeStruct(typ *core.Type, c *Statement) *Statement {
+func (g *Generator) fieldTypeStruct(typ *parser.Type, c *Statement) *Statement {
 	return g.fieldTypeNamed(typ, c)
 }
 
 // fieldTypeInterface генерирует код для интерфейса.
-func (g *Generator) fieldTypeInterface(typ *core.Type, c *Statement) *Statement {
+func (g *Generator) fieldTypeInterface(typ *parser.Type, c *Statement) *Statement {
 	return g.fieldTypeNamed(typ, c)
 }
 
 // fieldTypeFunction генерирует код для функционального типа.
-func (g *Generator) fieldTypeFunction(typ *core.Type, c *Statement) *Statement {
+func (g *Generator) fieldTypeFunction(typ *parser.Type, c *Statement) *Statement {
 	args := make([]Code, 0, len(typ.FunctionArgs))
 	for _, arg := range typ.FunctionArgs {
 		argType := g.FieldTypeFromVariable(arg, false)
@@ -231,7 +231,7 @@ func (g *Generator) fieldTypeFunction(typ *core.Type, c *Statement) *Statement {
 }
 
 // fieldTypeAlias генерирует код для алиаса типа.
-func (g *Generator) fieldTypeAlias(typ *core.Type, numberOfPointers int, allowEllipsis bool, c *Statement) *Statement {
+func (g *Generator) fieldTypeAlias(typ *parser.Type, numberOfPointers int, allowEllipsis bool, c *Statement) *Statement {
 	if typ.AliasOf != "" {
 		return g.FieldType(typ.AliasOf, numberOfPointers, allowEllipsis)
 	}
@@ -239,7 +239,7 @@ func (g *Generator) fieldTypeAlias(typ *core.Type, numberOfPointers int, allowEl
 }
 
 // fieldTypePrimitive генерирует код для примитивных типов.
-func (g *Generator) fieldTypePrimitive(typ *core.Type, typeID string, c *Statement) *Statement {
+func (g *Generator) fieldTypePrimitive(typ *parser.Type, typeID string, c *Statement) *Statement {
 	// Если у типа есть ImportPkgPath и TypeName, это именованный тип из другого пакета
 	if typ.ImportPkgPath != "" && typ.TypeName != "" {
 		return g.fieldTypeNamed(typ, c)
@@ -253,7 +253,7 @@ func (g *Generator) fieldTypePrimitive(typ *core.Type, typeID string, c *Stateme
 }
 
 // fieldTypeNamed генерирует код для именованного типа.
-func (g *Generator) fieldTypeNamed(typ *core.Type, c *Statement) *Statement {
+func (g *Generator) fieldTypeNamed(typ *parser.Type, c *Statement) *Statement {
 	if typ.ImportPkgPath != "" {
 		packageName := typ.PkgName
 		if packageName == "" {
@@ -270,7 +270,7 @@ func (g *Generator) fieldTypeNamed(typ *core.Type, c *Statement) *Statement {
 }
 
 // FuncDefinitionParams генерирует параметры или результаты метода.
-func (g *Generator) FuncDefinitionParams(vars []*core.Variable) *Statement {
+func (g *Generator) FuncDefinitionParams(vars []*parser.Variable) *Statement {
 	c := &Statement{}
 	c.ListFunc(func(gr *Group) {
 		for _, v := range vars {

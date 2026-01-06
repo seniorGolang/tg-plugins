@@ -10,9 +10,9 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 	"tgp/plugins/server/renderer/types"
-	"tgp/plugins/server/tags"
+	"tgp/internal/tags"
 )
 
 // RenderExchange генерирует структуры обмена данными (request/response).
@@ -70,21 +70,21 @@ type exchangeField struct {
 }
 
 // fieldsArgument возвращает поля для аргументов метода.
-func (r *contractRenderer) fieldsArgument(method *core.Method) []exchangeField {
+func (r *contractRenderer) fieldsArgument(method *parser.Method) []exchangeField {
 
 	vars := argsWithoutContext(method)
 	return r.varsToFields(vars, method.Annotations)
 }
 
 // fieldsResult возвращает поля для результатов метода.
-func (r *contractRenderer) fieldsResult(method *core.Method) []exchangeField {
+func (r *contractRenderer) fieldsResult(method *parser.Method) []exchangeField {
 
 	vars := resultsWithoutError(method)
 	return r.varsToFields(vars, method.Annotations)
 }
 
 // varsToFields конвертирует переменные в поля структуры.
-func (r *contractRenderer) varsToFields(vars []*core.Variable, methodTags tags.DocTags) []exchangeField {
+func (r *contractRenderer) varsToFields(vars []*parser.Variable, methodTags tags.DocTags) []exchangeField {
 
 	fields := make([]exchangeField, 0, len(vars))
 	for _, v := range vars {
@@ -149,7 +149,7 @@ func (r *contractRenderer) structField(typeGen *types.Generator, field exchangeF
 		// Проверяем, есть ли информация о массивах/map
 		if field.isSlice || field.arrayLen > 0 || field.mapKeyID != "" {
 			// Создаем временный Variable для передачи в FieldTypeFromVariable
-			v := &core.Variable{
+			v := &parser.Variable{
 				TypeID:           field.typeID,
 				NumberOfPointers: field.numberOfPointers,
 				IsSlice:          field.isSlice,

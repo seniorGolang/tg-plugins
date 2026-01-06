@@ -7,20 +7,20 @@ import (
 	"fmt"
 
 	tgpcore "tgp/core"
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 	"tgp/plugins/server/renderer"
 	"tgp/plugins/server/utils"
 )
 
 // DeserializeProject десериализует Project из JSON.
-func DeserializeProject(projectData interface{}) (*core.Project, error) {
+func DeserializeProject(projectData interface{}) (*parser.Project, error) {
 
 	projectBytes, err := json.Marshal(projectData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal project data: %w", err)
 	}
 
-	var project core.Project
+	var project parser.Project
 	if err := json.Unmarshal(projectBytes, &project); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal project: %w", err)
 	}
@@ -29,7 +29,7 @@ func DeserializeProject(projectData interface{}) (*core.Project, error) {
 }
 
 // GenerateServer генерирует код сервера для указанного контракта.
-func GenerateServer(project *core.Project, contractID string, outDir, projectRoot string) error {
+func GenerateServer(project *parser.Project, contractID string, outDir, projectRoot string) error {
 
 	if err := utils.ValidateProject(project); err != nil {
 		return fmt.Errorf("invalid project: %w", err)
@@ -74,7 +74,7 @@ func GenerateServer(project *core.Project, contractID string, outDir, projectRoo
 }
 
 // GenerateTransportFiles генерирует транспортные файлы верхнего уровня один раз для всех контрактов.
-func GenerateTransportFiles(project *core.Project, outDir, projectRoot string, contracts ...string) error {
+func GenerateTransportFiles(project *parser.Project, outDir, projectRoot string, contracts ...string) error {
 
 	if err := utils.ValidateProject(project); err != nil {
 		return fmt.Errorf("invalid project: %w", err)
@@ -116,8 +116,8 @@ func GenerateTransportFiles(project *core.Project, outDir, projectRoot string, c
 
 // generator содержит состояние генератора сервера.
 type generator struct {
-	project  *core.Project
-	contract *core.Contract
+	project  *parser.Project
+	contract *parser.Contract
 	outDir   string
 	renderer renderer.Renderer
 }
@@ -243,14 +243,14 @@ func (g *generator) generateTransport() error {
 }
 
 // filterContracts фильтрует контракты по указанным именам или ID.
-func filterContracts(project *core.Project, contractNames []string) (*core.Project, error) {
+func filterContracts(project *parser.Project, contractNames []string) (*parser.Project, error) {
 
 	contractMap := make(map[string]bool, len(contractNames))
 	for _, name := range contractNames {
 		contractMap[name] = true
 	}
 
-	filteredContracts := make([]*core.Contract, 0)
+	filteredContracts := make([]*parser.Contract, 0)
 	for _, contract := range project.Contracts {
 		if contractMap[contract.Name] || contractMap[contract.ID] {
 			filteredContracts = append(filteredContracts, contract)

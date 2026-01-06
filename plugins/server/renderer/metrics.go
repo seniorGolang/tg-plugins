@@ -9,7 +9,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 	"tgp/plugins/server/renderer/types"
 )
 
@@ -71,7 +71,7 @@ func (r *contractRenderer) metricsMiddleware() Code {
 }
 
 // metricFuncBody генерирует тело функции для метода с метриками.
-func (r *contractRenderer) metricFuncBody(method *core.Method) func(bg *Group) {
+func (r *contractRenderer) metricFuncBody(method *parser.Method) func(bg *Group) {
 
 	return func(bg *Group) {
 
@@ -150,7 +150,7 @@ func (r *contractRenderer) metricFuncBody(method *core.Method) func(bg *Group) {
 }
 
 // methodIsHTTP проверяет, является ли метод HTTP методом.
-func (r *contractRenderer) methodIsHTTP(method *core.Method) bool {
+func (r *contractRenderer) methodIsHTTP(method *parser.Method) bool {
 
 	contractHasHTTP := r.contract.Annotations.Contains(TagServerHTTP)
 	methodHasHTTP := method.Annotations.Contains(TagMethodHTTP)
@@ -158,7 +158,7 @@ func (r *contractRenderer) methodIsHTTP(method *core.Method) bool {
 }
 
 // paramNames генерирует список имен параметров для вызова функции.
-func (r *contractRenderer) paramNames(vars []*core.Variable) *Statement {
+func (r *contractRenderer) paramNames(vars []*parser.Variable) *Statement {
 
 	var list = make([]Code, 0, len(vars))
 	for _, v := range vars {

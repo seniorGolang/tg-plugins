@@ -5,11 +5,11 @@ package utils
 import (
 	"slices"
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 // IsContextFirst проверяет, является ли первый аргумент context.Context.
-func IsContextFirst(vars []*core.Variable) bool {
+func IsContextFirst(vars []*parser.Variable) bool {
 
 	if len(vars) == 0 {
 		return false
@@ -19,7 +19,7 @@ func IsContextFirst(vars []*core.Variable) bool {
 }
 
 // IsErrorLast проверяет, является ли последний результат error.
-func IsErrorLast(vars []*core.Variable) bool {
+func IsErrorLast(vars []*parser.Variable) bool {
 
 	if len(vars) == 0 {
 		return false
@@ -28,7 +28,7 @@ func IsErrorLast(vars []*core.Variable) bool {
 }
 
 // ArgsWithoutContext возвращает аргументы без первого context.Context, если он есть.
-func ArgsWithoutContext(method *core.Method) []*core.Variable {
+func ArgsWithoutContext(method *parser.Method) []*parser.Variable {
 
 	if IsContextFirst(method.Args) {
 		return method.Args[1:]
@@ -39,7 +39,7 @@ func ArgsWithoutContext(method *core.Method) []*core.Variable {
 // ArgsFieldsWithoutContext возвращает аргументы без context, обрабатывая inline поля.
 // Примечание: Полная обработка inline полей реализована в renderer.inline_fields.go
 // Эта функция используется только в контексте, где inline поля не требуются.
-func ArgsFieldsWithoutContext(method *core.Method) []*core.Variable {
+func ArgsFieldsWithoutContext(method *parser.Method) []*parser.Variable {
 
 	argVars := ArgsWithoutContext(method)
 	// Inline поля обрабатываются в renderer.ArgsFieldsWithoutContext()
@@ -47,7 +47,7 @@ func ArgsFieldsWithoutContext(method *core.Method) []*core.Variable {
 }
 
 // ResultsWithoutError возвращает результаты без последнего error, если он есть.
-func ResultsWithoutError(method *core.Method) []*core.Variable {
+func ResultsWithoutError(method *parser.Method) []*parser.Variable {
 
 	if IsErrorLast(method.Results) {
 		return method.Results[:len(method.Results)-1]
@@ -58,7 +58,7 @@ func ResultsWithoutError(method *core.Method) []*core.Variable {
 // ResultFieldsWithoutError возвращает результаты без error, обрабатывая inline поля.
 // Примечание: Полная обработка inline полей реализована в renderer.inline_fields.go
 // Эта функция используется только в контексте, где inline поля не требуются.
-func ResultFieldsWithoutError(method *core.Method) []*core.Variable {
+func ResultFieldsWithoutError(method *parser.Method) []*parser.Variable {
 
 	resultVars := ResultsWithoutError(method)
 	// Inline поля обрабатываются в renderer.ResultFieldsWithoutError()
@@ -78,9 +78,9 @@ func ResponseStructName(contractName string, methodName string) string {
 }
 
 // RemoveSkippedFields удаляет поля из списка, которые указаны в skipFields.
-func RemoveSkippedFields(vars []*core.Variable, skipFields []string) []*core.Variable {
+func RemoveSkippedFields(vars []*parser.Variable, skipFields []string) []*parser.Variable {
 
-	var result []*core.Variable
+	var result []*parser.Variable
 	for _, v := range vars {
 		if !slices.Contains(skipFields, v.Name) {
 			result = append(result, v)
@@ -92,7 +92,7 @@ func RemoveSkippedFields(vars []*core.Variable, skipFields []string) []*core.Var
 // Arguments возвращает аргументы, которые должны быть в теле запроса.
 // Эта функция должна использоваться только в контексте renderer, где есть доступ к аннотациям.
 // Для полной реализации нужен доступ к method.Annotations, поэтому эта функция оставлена как заглушка.
-func Arguments(method *core.Method) []*core.Variable {
+func Arguments(method *parser.Method) []*parser.Variable {
 
 	// Эта функция не может быть полностью реализована без доступа к аннотациям метода
 	// Полная реализация находится в renderer.arguments()

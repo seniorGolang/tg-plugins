@@ -10,7 +10,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 	"tgp/plugins/server/renderer/types"
 )
 
@@ -42,7 +42,7 @@ func (r *contractRenderer) RenderREST() error {
 }
 
 // httpMethodFunc генерирует функцию обработки HTTP метода.
-func (r *contractRenderer) httpMethodFunc(typeGen *types.Generator, method *core.Method) Code {
+func (r *contractRenderer) httpMethodFunc(typeGen *types.Generator, method *parser.Method) Code {
 
 	return Func().Params(Id("http").Op("*").Id("http"+r.contract.Name)).
 		Id(toLowerCamel(method.Name)).
@@ -75,7 +75,7 @@ func (r *contractRenderer) httpMethodFunc(typeGen *types.Generator, method *core
 }
 
 // httpServeMethodFunc генерирует функцию обработки HTTP запроса.
-func (r *contractRenderer) httpServeMethodFunc(srcFile *GoFile, typeGen *types.Generator, method *core.Method, jsonPkg string) Code {
+func (r *contractRenderer) httpServeMethodFunc(srcFile *GoFile, typeGen *types.Generator, method *parser.Method, jsonPkg string) Code {
 
 	return Func().Params(Id("http").Op("*").Id("http" + r.contract.Name)).
 		Id("serve" + method.Name).

@@ -10,7 +10,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 	"tgp/plugins/server/renderer/types"
 )
 
@@ -70,7 +70,7 @@ func (r *contractRenderer) loggerMiddleware() Code {
 }
 
 // loggerFuncBody генерирует тело функции для метода с логированием.
-func (r *contractRenderer) loggerFuncBody(method *core.Method) func(bg *Group) {
+func (r *contractRenderer) loggerFuncBody(method *parser.Method) func(bg *Group) {
 
 	return func(bg *Group) {
 		bg.Id("sLogger").Op(":=").Id("FromContext").Call(Id(VarNameCtx))
@@ -154,7 +154,7 @@ func (r *contractRenderer) loggerFuncBody(method *core.Method) func(bg *Group) {
 }
 
 // dictByNormalVariables создаёт Dict для jennifer из полей и нормальных переменных.
-func (r *contractRenderer) dictByNormalVariables(fields []*core.Variable, normals []*core.Variable) Dict {
+func (r *contractRenderer) dictByNormalVariables(fields []*parser.Variable, normals []*parser.Variable) Dict {
 
 	if len(fields) != len(normals) {
 		panic("len of fields and normals not the same")

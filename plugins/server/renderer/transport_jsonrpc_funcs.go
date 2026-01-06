@@ -8,7 +8,7 @@ import (
 
 	. "github.com/dave/jennifer/jen" // nolint:staticcheck
 
-	"tgp/plugins/server/core"
+	"tgp/internal/parser"
 )
 
 // jsonBufferPools генерирует пулы буферов для JSON-RPC.
@@ -326,7 +326,7 @@ func (r *transportRenderer) makeErrorResponseJsonRPCFunc() Code {
 }
 
 // methodIsJsonRPCForContract проверяет, является ли метод JSON-RPC методом для указанного контракта.
-func (r *transportRenderer) methodIsJsonRPCForContract(contract *core.Contract, method *core.Method) bool {
+func (r *transportRenderer) methodIsJsonRPCForContract(contract *parser.Contract, method *parser.Method) bool {
 
 	if method == nil || method.Annotations == nil {
 		return false
